@@ -44,6 +44,8 @@ class PillWindow(Gtk.ApplicationWindow):
             .island .artist {{ color: {config.SECONDARY}; }}
             .island .status {{ color: {config.ACCENT}; font-size: 9pt; }}
             .island .timing {{ color: {config.SECONDARY}; font-size: 9pt; }}
+            .island .lyric-current {{ color: {config.FOREGROUND}; font-size: 11pt; }}
+            .island .lyric-secondary {{ color: {config.SECONDARY}; font-size: 9pt; }}
             .island .cover {{ color: {config.SECONDARY}; border-radius: 10px; }}
             .island progressbar trough {{ background: #707070; min-height: 4px; }}
             .island progressbar progress {{ background: {config.ACCENT}; min-height: 4px; }}

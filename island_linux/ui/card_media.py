@@ -2,6 +2,7 @@
 
 from concurrent.futures import ThreadPoolExecutor
 import logging
+import time
 
 import gi
 
@@ -10,6 +11,7 @@ gi.require_version("GdkPixbuf", "2.0")
 from gi.repository import Gdk, GdkPixbuf, GLib, Gtk, Pango
 
 from island_linux import config
+from island_linux.lyrics import LyricsClient, LyricsResult, line_index_at, parse_lrc
 from .artwork import load_cover_bytes
 
 LOG = logging.getLogger(__name__)
@@ -47,6 +49,13 @@ class CardMedia(Gtk.Box):
         self._cover_url = None
         self._cover_future = None
         self._cover_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="cover")
+        self._lyrics_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="lyrics")
+        self._lyrics_client = None
+        self._lyrics_key = None
+        self._lyrics_generation = 0
+        self._lyrics_future = None
+        self._lyrics_result = None
+        self._lyrics_retry_at = 0.0
         self.set_margin_start(config.PADDING)
         self.set_margin_end(config.PADDING)
         self.set_margin_top(16)
@@ -99,6 +108,16 @@ class CardMedia(Gtk.Box):
         for button in (self.previous_button, self.play_button, self.next_button):
             controls.append(button)
         self.play_button.add_css_class("play-toggle")
+        lyrics_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
+        lyrics_box.set_margin_top(4)
+        self.playback.append(lyrics_box)
+        self.lyric_label = self._label("", "lyric-current")
+        self.romaji_label = self._label("", "lyric-secondary")
+        self.next_lyric_label = self._label("", "lyric-secondary")
+        for label in (self.lyric_label, self.romaji_label, self.next_lyric_label):
+            label.set_xalign(0.5)
+            label.set_max_width_chars(38)
+            lyrics_box.append(label)
         self.playback.set_visible(False)
 
     @staticmethod
@@ -145,6 +164,86 @@ class CardMedia(Gtk.Box):
             self.duration.set_text(_time(state.duration) if state.duration else "?:??")
             self._set_cover(state.art_url)
         self.set_busy(self._busy)
+        self._sync_lyrics(state, demo)
+
+    def _lyrics_text(self, current, romaji="", upcoming=""):
+        for label, text in zip((self.lyric_label, self.romaji_label, self.next_lyric_label), (current, romaji, upcoming)):
+            label.set_text(text)
+            label.set_tooltip_text(text or None)
+
+    def _fetch_lyrics(self, artist, title, duration, demo):
+        if demo:
+            # Teks contoh buatan proyek, bukan lirik lagu nyata; tidak memakai jaringan.
+            return LyricsResult("synced", parse_lrc(
+                "[00:00.00]Ini baris contoh pertama\n"
+                "[00:08.00]こんにちは 世界\n"
+                "[00:16.00]Ini baris contoh berikutnya\n"
+                "[00:24.00]\n"
+                "[00:32.00]これはデモです\n"
+                "[00:40.00]Baris mengikuti posisi playback\n"
+                "[00:48.00]こんにちは\n"
+                "[00:56.00]Contoh lirik selesai"))
+        if self._lyrics_client is None:
+            self._lyrics_client = LyricsClient(user_agent=config.LRCLIB_USER_AGENT)
+        return self._lyrics_client.fetch(artist, title, duration)
+
+    def _sync_lyrics(self, state, demo):
+        key = (state.bus_name, state.track_id, state.title, state.artists, round(state.duration, 1), demo) if state else None
+        if key != self._lyrics_key:
+            self._lyrics_key = key
+            self._lyrics_generation += 1
+            if self._lyrics_future:
+                self._lyrics_future.cancel()
+            self._lyrics_future = None
+            self._lyrics_result = None
+            self._lyrics_retry_at = 0.0
+            self._lyrics_text("Mencari lirik sinkron…", "LRCLIB" if not demo else "Contoh lirik demo")
+        if state is None:
+            return
+        if self._lyrics_result is not None:
+            self._render_lyrics()
+        elif self._lyrics_future is None and time.monotonic() >= self._lyrics_retry_at:
+            artist = state.artists[0] if state.artists else ""
+            future = self._lyrics_executor.submit(self._fetch_lyrics, artist, state.title, state.duration, demo)
+            self._lyrics_future = future
+            generation = self._lyrics_generation
+            future.add_done_callback(lambda result: GLib.idle_add(self._lyrics_ready, generation, result))
+
+    def _lyrics_ready(self, generation, future):
+        if self._closed or generation != self._lyrics_generation:
+            return GLib.SOURCE_REMOVE
+        self._lyrics_future = None
+        try:
+            self._lyrics_result = future.result()
+            self._render_lyrics()
+        except Exception as exc:
+            LOG.debug("Lirik gagal dimuat: %s", exc)
+            self._lyrics_retry_at = time.monotonic() + max(1, getattr(exc, "retry_after", 60))
+            self._lyrics_text("Lirik belum dapat dimuat", "Mencoba lagi otomatis", "LRCLIB")
+            self.lyric_label.set_tooltip_text(str(exc))
+        return GLib.SOURCE_REMOVE
+
+    def _render_lyrics(self):
+        result = self._lyrics_result
+        if self._state is None:
+            return
+        if result.status != "synced":
+            messages = {
+                "instrumental": "Instrumental · tanpa lirik",
+                "plain": "Lirik tersedia tanpa timestamp",
+                "not_found": "Lirik sinkron tidak ditemukan",
+                "missing_metadata": "Judul atau artis belum tersedia",
+            }
+            self._lyrics_text(messages.get(result.status, "Lirik tidak tersedia"), "LRCLIB")
+            return
+        index = line_index_at(result.lines, self._state.position)
+        active = result.lines[index] if index >= 0 else None
+        following = result.lines[index + 1] if index + 1 < len(result.lines) else None
+        self._lyrics_text(
+            (active.text or "Jeda lirik") if active else "Menunggu baris pertama…",
+            active.romaji if active and active.romaji else "Lirik sinkron",
+            "Berikut: " + (following.text or "Jeda lirik") if following else "",
+        )
 
     def set_busy(self, busy):
         self._busy = busy
@@ -188,3 +287,12 @@ class CardMedia(Gtk.Box):
     def close(self):
         self._closed = True
         self._cover_executor.shutdown(wait=False, cancel_futures=True)
+        if self._lyrics_future:
+            self._lyrics_future.cancel()
+        # Session ditutup di worker yang sama setelah request aktif selesai.
+        self._lyrics_executor.submit(self._close_lyrics)
+        self._lyrics_executor.shutdown(wait=False)
+
+    def _close_lyrics(self):
+        if self._lyrics_client:
+            self._lyrics_client.close()

@@ -21,3 +21,12 @@ Kontras terukur terhadap latar: judul 14.94:1, artis 9.34:1, status 10.45:1.
 - Progress memakai aksen status yang sama; waktu terpisah di bawah bar membuat durasi tetap terbaca tanpa mengisi bar dengan teks.
 - Outline fokus 2 piksel tetap terlihat pada navigasi keyboard; label aksesibel Putar/Jeda ikut berubah sesuai aksi.
 - Jalur progress #707070 memiliki kontras 3.29:1 terhadap latar; isi aksen memiliki kontras 3.18:1 terhadap jalur. Ikon terang terhadap warna tombol aktif paling terang #626262 memiliki kontras 5.59:1.
+
+## Lirik tahap 4
+
+- Tiga baris di bawah kontrol memberi ruang tetap untuk baris aktif, romaji, dan baris berikutnya tanpa membuat metadata bergeser saat lirik berubah.
+- Baris aktif memakai warna judul; romaji dan pratinjau memakai warna sekunder agar hierarkinya terbaca tanpa tambahan aksen.
+- Pergantian baris langsung mengikuti posisi playback. Tidak ada animasi gulir atau marquee yang memindahkan teks saat dibaca.
+- Teks asli tetap terlihat pada lirik Jepang; romaji membantu membaca tanpa menggantikan sumber.
+- Lirik panjang memakai elipsis dan tooltip penuh agar pill tetap 380 piksel. Ukuran kartu aktif terukur 380×243 pada lingkungan uji.
+- Pesan mencari, gagal, tidak ditemukan, instrumental, dan tanpa timestamp memakai area yang sama agar kontrol media tetap tersedia.
