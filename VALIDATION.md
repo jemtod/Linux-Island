@@ -1,4 +1,30 @@
-# Validasi tahap 2
+# Validasi runtime
+
+## Tahap 3: kartu media
+
+Pemeriksaan menggunakan GTK4/libadwaita pada display GNOME melalui XWayland, Python 3.14 dan dependensi virtualenv. Player Spotify/browser milik pengguna tidak dikontrol selama pengujian. Ubuntu 24.04, Python 3.11/3.12, mixed-DPI, dan fullscreen belum diuji langsung.
+
+- PASS: 28 unit test headless (`python3 -m pytest -q`): metadata/pemilihan/kontrol MPRIS, URI cover lokal berkarakter khusus, HTTP mock, penutupan respons saat error, dan batas ukuran unduhan.
+- PASS: kompilasi Python dan `git diff --check`.
+- PASS: kartu demo 380×175 dijalankan pada desktop dan hasil render diperiksa visual; tiga tombol demo mengganti lagu/status, progress dan waktu mengikuti snapshot.
+- PASS: decoder cover menghasilkan gambar 64×64; hasil lama diabaikan. Skenario tanpa media, tanpa durasi, error, dan tombol tanpa capability diperiksa melalui widget GTK nyata.
+- PASS: `dbus-run-session -- env ISLAND_TEST_BUS=1 .venv/bin/python tests/manual_media_ui.py` menghubungkan kartu ke client pydbus dan server MPRIS tiruan lewat session bus nyata. Ketiga method diterima; klik next saat polling masuk antrean; metadata, waktu, cover lokal, dan fokus previous/play/next diperiksa.
+- PASS: properti X11 kartu masih mencakup `ABOVE` dan `SKIP_TASKBAR`.
+- Batas: HTTP diuji dengan respons mock; belum ada klaim unduhan cover dari Spotify/browser nyata. Uji sinyal tombol memakai `clicked`, bukan klik mouse fisik. Navigasi fokus memakai API GTK, bukan input keyboard fisik.
+
+### Delivery Gate tahap 3
+
+- Hard Gate PASS (R-02/17/18/23/24/28/36/38): tidak ada em dash pada copy baru, aset produk rekaan, statistik, FAQ, atau navigasi palsu. Bitmap satu warna hanya fixture uji sementara dan dihapus setelah uji.
+- Hard Gate PASS (R-03/25/32/39): metadata memakai elipsis/tooltip; tombol native GTK 40×40 memiliki label aksesibel, status enabled/disabled, cursor, hover/active, dan outline fokus. Urutan fokus diperiksa di uji integrasi. Cakupan desktop, bukan klaim dukungan mobile atau screen reader menyeluruh.
+- Hard Gate PASS (R-26/27/35): ketiga tombol dieksekusi sampai ke server MPRIS uji; loading/empty/error memiliki teks. Runtime kartu dijalankan, bukan hanya dikompilasi.
+- Hard Gate PASS (R-33/34/37/40): kode fitur ditulis langsung dalam modul, arah desain ada di DESIGN.md; tema tetap punya alasan, tidak ada toggle atau animasi. Cover punya alokasi 64×64; aturan dokumen/media web tidak berlaku.
+- Purpose Gate PASS (R-01/04/06/07/08/09/10/12/13/14/19/22): ikon media GNOME dan ikon audio fallback relevan, tipografi/alokasi/warna dijelaskan di DESIGN.md; tidak ada gradien, glass, glow, badge, atau animasi dekoratif.
+- Liveliness PASS: ENERGY/RHYTHM/MOTION tetap 1/1/1, judul dan cover menjadi titik perhatian, jarak memisahkan metadata/progress/kontrol, aksen digunakan untuk status/progress/fokus.
+- Craftsmanship PASS (C-1/2/3/5 dan quality locks): kartu hanya berisi fitur tahap ini, progres informatif tidak menyamar sebagai seek, kontrol unsupported nonaktif, batas backend dijelaskan; semua pilihan visual utama punya alasan.
+- Resilience PASS untuk skenario yang diuji (C-4): cover gagal/tidak tersedia mempertahankan kontrol, cover lama diabaikan, capability dan durasi kosong ditangani, pekerjaan jaringan dan D-Bus berada di worker terpisah. Target Ubuntu, pembesaran teks ekstrem, dan lingkungan multi-monitor tetap membutuhkan uji lanjutan.
+- Contrast PASS: judul/artis/status mempertahankan 14.94/9.34/10.45:1 terhadap latar. Ikon pada background tombol aktif paling terang 5.59:1; jalur progress terhadap latar 3.29:1; isi progress terhadap jalur 3.18:1. Dihitung dengan contrast-check.py.
+
+## Riwayat tahap 2
 
 Pemeriksaan dilakukan pada sesi GNOME Wayland dengan GTK4 4.22, libadwaita 1.9, Python sistem 3.14. Target instalasi tetap Ubuntu 24.04/Python 3.11+. Kompatibilitas versi target dan metadata player nyata belum diverifikasi di lingkungan ini karena pydbus belum terpasang. Data demo dan simulasi status diberi label, bukan bukti integrasi player nyata.
 

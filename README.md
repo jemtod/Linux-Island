@@ -2,7 +2,7 @@
 
 Widget floating kecil untuk GNOME/Ubuntu, terinspirasi dari [taskbar-island](https://github.com/xfwil/taskbar-island) versi Windows. Versi lite berfokus pada media MPRIS dan lirik sinkron LRCLIB.
 
-Saat ini tahap 2 tersedia: client MPRIS dan pill GTK4/libadwaita dengan judul, artis, serta status playback. Cover, progress, tombol media, dan lirik menyusul pada tahap berikutnya.
+Saat ini tahap 3 tersedia: client MPRIS dan pill GTK4/libadwaita dengan cover, judul, artis, status playback, progress, waktu, dan tombol previous/play-pause/next. Lirik menyusul pada tahap berikutnya.
 
 ## Instalasi
 
@@ -29,7 +29,7 @@ python3 -m pip install -r requirements-dev.txt
 python3 -m pytest -q
 ```
 
-## Menguji pill tahap 2
+## Menguji kartu media tahap 3
 
 Untuk memeriksa UI tanpa player atau D-Bus:
 
@@ -37,9 +37,21 @@ Untuk memeriksa UI tanpa player atau D-Bus:
 python island.py --demo
 ```
 
-Pill berlabel `Demo` menampilkan judul dan artis contoh. Tutup dengan Esc atau Ctrl+Q saat pill memiliki fokus, lalu jalankan `python island.py` untuk metadata nyata. Pill memindai setiap satu detik di worker agar akses D-Bus tidak memblokir UI. Saat semua player ditutup, pill menampilkan ajakan memutar musik. Gangguan bus ditampilkan sebagai pesan dan dicoba lagi otomatis.
+Pill berlabel `Demo` menampilkan lagu contoh, progress yang berjalan, dan tiga kontrol yang berfungsi pada data simulasi. Play/pause menghentikan/melanjutkan waktu demo; next/previous berpindah di antara tiga judul contoh. Tidak ada cover contoh; ikon audio GNOME menjadi fallback. Tutup dengan Esc atau Ctrl+Q saat pill memiliki fokus, lalu jalankan `python island.py` untuk metadata nyata. Pill memindai setiap satu detik di worker agar akses D-Bus tidak memblokir UI. Saat semua player ditutup, pill mengecil dengan ajakan memutar musik. Gangguan bus ditampilkan sebagai pesan dan dicoba lagi otomatis.
 
-Saat lagu diputar, periksa judul/artis. Jeda lalu lanjutkan: teks status mengikuti. Pindah lagu untuk memeriksa pembaruan metadata. Coba judul panjang: teks dipotong dengan elipsis dan teks lengkap tersedia saat di-hover. Buka window lain: pill seharusnya tetap di atas.
+Saat lagu diputar, periksa cover, judul/artis, dan posisi terhadap player asli. Klik play/pause: status dan posisi mengikuti. Klik next/previous: player asli harus menerima perintah. Tombol yang tidak didukung capability player dinonaktifkan. Tab memindahkan fokus antar tombol; Enter/Space mengaktifkannya. Coba judul panjang: teks dipotong dengan elipsis dan teks lengkap tersedia saat di-hover. Buka window lain: pill seharusnya tetap di atas.
+
+Cover mendukung HTTP/HTTPS, URI `file://`, dan path absolut. Pemuatan/decode dilakukan di worker terpisah, dengan batas 5 MiB dan timeout jaringan. Cover kosong, rusak, atau gagal diunduh memakai ikon audio; kontrol tetap berjalan. Respons cover lagu lama diabaikan bila lagu sudah berganti. URL gagal dicoba lagi setelah URL berubah atau aplikasi dijalankan ulang. Cover tidak disimpan ke disk.
+
+Progress bar bersifat informatif, belum mendukung seek. Bila durasi tidak tersedia, waktu total ditampilkan `?:??` dan progress tetap nol. Posisi mengikuti snapshot MPRIS tiap detik, bukan perkiraan waktu lokal. Player kadang membatasi next/previous atau memperbarui status setelah jeda singkat.
+
+Uji integrasi opsional memakai player tiruan di session D-Bus terisolasi. Jalankan dari terminal desktop dengan virtualenv aktif:
+
+```bash
+dbus-run-session -- env ISLAND_TEST_BUS=1 python tests/manual_media_ui.py
+```
+
+Window uji muncul sebentar, memuat cover fixture lokal, menjalankan ketiga kontrol, memeriksa antrean klik saat polling dan urutan fokus keyboard, lalu menutup. Hasil yang diharapkan: baris `PASS: D-Bus, metadata, cover, progress, PlayPause, antrean Next, Previous, fokus keyboard`. Skrip ini tidak termasuk koleksi pytest headless dan tidak mengontrol player di session desktop utama. Beberapa sistem menampilkan log portal GNOME selama session uji dibuat/dihentikan.
 
 Secara default entry point mencoba backend X11, termasuk XWayland di GNOME Wayland, lalu fallback Wayland. Hint EWMH `ABOVE` dan posisi sudut dikirim melalui libX11; tidak memerlukan wmctrl atau layer-shell. Compositor tetap menentukan hasil akhirnya. Jika ingin memilih backend secara eksplisit:
 
@@ -64,9 +76,8 @@ Metadata tidak selalu lengkap. Durasi/posisi tidak valid dianggap nol, progres d
 
 ## Tahap berikutnya
 
-1. Kartu media lengkap: cover, progres, dan tombol kontrol.
-2. Lirik LRCLIB, sinkronisasi waktu, romanisasi Jepang; lirik tidak selalu tersedia.
-3. `--selftest`, CI Python 3.11/3.12, dan dokumentasi lengkap.
+1. Lirik LRCLIB, sinkronisasi waktu, romanisasi Jepang; lirik tidak selalu tersedia.
+2. `--selftest`, CI Python 3.11/3.12, dan dokumentasi lengkap.
 
 Roadmap setelah versi lite: kartu Claude usage, launcher tiles, auto-hide fullscreen, dan layer-shell Wayland.
 
