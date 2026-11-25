@@ -2,7 +2,7 @@
 
 Widget floating kecil untuk GNOME/Ubuntu, terinspirasi dari [taskbar-island](https://github.com/xfwil/taskbar-island) versi Windows. Versi lite berfokus pada media MPRIS dan lirik sinkron LRCLIB.
 
-Saat ini tahap 3 tersedia: client MPRIS dan pill GTK4/libadwaita dengan cover, judul, artis, status playback, progress, waktu, dan tombol previous/play-pause/next. Lirik menyusul pada tahap berikutnya.
+Saat ini tahap 4 tersedia: client MPRIS dan pill GTK4/libadwaita dengan cover, metadata, progress, kontrol media, serta lirik sinkron LRCLIB dan romanisasi Jepang. `--selftest` dan CI menyusul pada tahap 5.
 
 ## Instalasi
 
@@ -29,7 +29,7 @@ python3 -m pip install -r requirements-dev.txt
 python3 -m pytest -q
 ```
 
-## Menguji kartu media tahap 3
+## Menguji kartu media
 
 Untuk memeriksa UI tanpa player atau D-Bus:
 
@@ -51,7 +51,31 @@ Uji integrasi opsional memakai player tiruan di session D-Bus terisolasi. Jalank
 dbus-run-session -- env ISLAND_TEST_BUS=1 python tests/manual_media_ui.py
 ```
 
-Window uji muncul sebentar, memuat cover fixture lokal, menjalankan ketiga kontrol, memeriksa antrean klik saat polling dan urutan fokus keyboard, lalu menutup. Hasil yang diharapkan: baris `PASS: D-Bus, metadata, cover, progress, PlayPause, antrean Next, Previous, fokus keyboard`. Skrip ini tidak termasuk koleksi pytest headless dan tidak mengontrol player di session desktop utama. Beberapa sistem menampilkan log portal GNOME selama session uji dibuat/dihentikan.
+Window uji muncul sebentar, memuat cover fixture lokal, menjalankan ketiga kontrol, memeriksa antrean klik saat polling, urutan fokus keyboard, sinkronisasi lirik, dan romaji, lalu menutup. Hasil yang diharapkan: baris `PASS: D-Bus, cover, progress, kontrol, fokus, lirik, romaji, seek maju/mundur, respons lagu lama`. HTTP LRCLIB dimock memakai `responses`; tidak ada akses internet dari skrip uji ini. Skrip tidak termasuk koleksi pytest headless dan tidak mengontrol player di session desktop utama. Beberapa sistem menampilkan log portal GNOME selama session uji dibuat/dihentikan.
+
+## Menguji lirik tahap 4
+
+Perbarui dependensi pada virtualenv aktif, lalu jalankan demo tanpa internet:
+
+```bash
+python -m pip install -r requirements.txt -r requirements-dev.txt
+python -m pytest -q
+python island.py --demo
+```
+
+Bagian bawah kartu menampilkan baris aktif, romaji bila ada teks Jepang, serta pratinjau baris berikutnya. Demo memakai teks contoh buatan proyek. Setelah beberapa detik, teks Jepang dan romaji muncul. Tombol jeda menghentikan posisi lirik; next/previous memulai waktu contoh dari nol. Baris berganti langsung tanpa animasi agar mudah dibaca. Teks panjang dipotong dengan elipsis; arahkan pointer untuk membaca tooltip lengkap.
+
+Untuk lagu nyata, jalankan `python island.py`, lalu putar lagu di player MPRIS. Saat terhubung internet dan LRCLIB memiliki lirik sinkron yang cocok, baris mengikuti posisi player setiap satu detik. Seek di aplikasi player asli untuk memeriksa lompatan maju/mundur. Jeda tidak menggeser lirik bila posisi MPRIS tetap. Pindah lagu saat lirik masih dimuat: respons lagu sebelumnya harus diabaikan.
+
+Client mencoba `/api/get` dengan artis pertama, judul, dan durasi jika valid, lalu `/api/search` bila lirik sinkron belum ditemukan. Kandidat pencarian harus cocok pada judul/artis yang dinormalisasi, dengan selisih durasi paling besar tiga detik jika durasi diketahui. Pencocokan ini bisa melewatkan metadata dengan tambahan judul live/remix atau nama artis yang berbeda. Tanpa durasi, versi rekaman lebih sulit dibedakan.
+
+Cache hanya di memori, maksimal 64 lagu: hasil tersedia disimpan 30 menit, hasil tidak ditemukan 5 menit. Polling playback tidak mengulang permintaan lirik setiap detik. Kegagalan jaringan dicoba lagi setelah sekitar satu menit selama lagu tetap aktif; respons pembatasan layanan mengikuti `Retry-After` dengan tambahan jeda kecil. Lirik yang tidak ditemukan dicari kembali saat lagu berganti kembali, sesuai umur cache, atau setelah aplikasi dijalankan ulang.
+
+Status `Lirik tersedia tanpa timestamp` berarti LRCLIB punya teks tanpa waktu; teks tersebut tidak dipaksakan menjadi lirik sinkron. Lagu instrumental dan metadata yang kurang juga diberi pesan tersendiri. Timestamp kosong pada LRC ditampilkan sebagai `Jeda lirik`, bukan mempertahankan baris sebelumnya. Parser mendukung timestamp berulang dan offset LRC; offset positif memajukan waktu tampil.
+
+Romanisasi memakai pykakasi dalam worker dan mempertahankan teks asli. Deteksi didasarkan pada kana/kanji, sehingga teks Han non-Jepang juga bisa dianggap Jepang. Bacaan kanji dan pemisahan kata tidak selalu sesuai konteks atau pengucapan penyanyi.
+
+Header identitas client dapat diubah melalui `LRCLIB_USER_AGENT` di config.py. Nilai bawaan menandai build lokal; tambahkan URL proyek publik atau kontak yang benar bila mendistribusikannya. Referensi implementasi: [API LRCLIB](https://lrclib.net/docs.md) dan [API pykakasi](https://pykakasi.readthedocs.io/en/latest/api.html).
 
 Secara default entry point mencoba backend X11, termasuk XWayland di GNOME Wayland, lalu fallback Wayland. Hint EWMH `ABOVE` dan posisi sudut dikirim melalui libX11; tidak memerlukan wmctrl atau layer-shell. Compositor tetap menentukan hasil akhirnya. Jika ingin memilih backend secara eksplisit:
 
@@ -76,8 +100,8 @@ Metadata tidak selalu lengkap. Durasi/posisi tidak valid dianggap nol, progres d
 
 ## Tahap berikutnya
 
-1. Lirik LRCLIB, sinkronisasi waktu, romanisasi Jepang; lirik tidak selalu tersedia.
-2. `--selftest`, CI Python 3.11/3.12, dan dokumentasi lengkap.
+1. `--selftest` untuk logic inti tanpa GUI.
+2. CI Python 3.11/3.12 dan finalisasi dokumentasi versi lite.
 
 Roadmap setelah versi lite: kartu Claude usage, launcher tiles, auto-hide fullscreen, dan layer-shell Wayland.
 

@@ -1,5 +1,24 @@
 # Validasi runtime
 
+## Tahap 4: lirik sinkron
+
+- PASS: 63 test headless pada virtualenv Python 3.14, termasuk 35 kasus baru untuk format JSON LRCLIB, timestamp pecahan/berulang, offset, baris kosong, batas waktu pemilihan baris, fallback, cache, metadata kurang, HTTP error/timeout, Retry-After, dan pykakasi nyata.
+- PASS: uji GTK + D-Bus terisolasi pada `tests/manual_media_ui.py` memakai respons HTTP mock. Baris Jepang/romaji tampil, seek 65→71→6 detik mengganti baris dengan tepat, pergantian judul meminta hasil baru, dan callback dari generasi lagu lama diabaikan. Semua kontrol tahap 3 tetap bekerja.
+- PASS: client juga dipanggil ke LRCLIB nyata melalui koneksi jaringan. Hasil `synced`, 60 baris, tanpa mencetak atau menyimpan teks lagu dalam artefak proyek. Ini verifikasi layanan, bukan pengujian dengan player Spotify/browser milik pengguna.
+- PASS: pill demo 380×243 dijalankan dan render diperiksa visual. Teks Jepang asli, romaji, dan pratinjau terlihat tanpa memperlebar kartu.
+- PASS: status tanpa timestamp, instrumental, tidak ditemukan, metadata kurang, dan error diperiksa pada widget GTK nyata. Pemulihan setelah error mengembalikan lirik demo melalui worker.
+- Batas: waktu pembaruan mengikuti polling MPRIS satu detik. Tidak ada word-level karaoke, koreksi offset per lagu, tampilan penuh lirik unsynced, atau jaminan bacaan kanji sesuai nyanyian. Ubuntu target dan Python 3.11/3.12 belum dijalankan di lingkungan ini.
+
+### Delivery Gate tahap 4
+
+- Hard Gate PASS: copy baru tanpa em dash; seluruh teks demo merupakan fixture berlabel, tanpa kutipan lirik lagu nyata dalam kode, screenshot produk, atau README. Tidak ada aset, statistik, atau navigasi rekaan (R-02/17/18/23/24/28/36/38).
+- Hard Gate PASS: label lirik memakai elipsis dan tooltip, tiga baris memiliki ruang tetap, warna teks memakai pasangan yang sudah diukur 14.94:1 dan 9.34:1 (R-03/25/40). Cakupan desktop; pembesaran ekstrem dan screen reader belum diuji.
+- Hard Gate PASS: loading/empty/error dibedakan dengan teks; kontrol tetap berfungsi melalui D-Bus uji dan urutan fokus sebelumnya terjaga (R-26/27/32/35/39).
+- Hard Gate PASS: modul inti tidak mengimpor GTK, fitur ditulis langsung dalam modul, tidak ada toggle tema/animasi baru; arah dan alasan area lirik dicatat di DESIGN.md (R-33/34/37).
+- Purpose Gate PASS: tidak ada teknik dekoratif baru. Penempatan, font, warna, dan pergantian baris punya alasan keterbacaan yang tertulis (R-01/04/06/07/08/09/10/12/13/14/19/22).
+- Liveliness PASS: ENERGY/RHYTHM/MOTION tetap 1/1/1; lirik aktif dibedakan dari romaji/pratinjau lewat hierarki teks, tanpa menambah warna atau gerak dekoratif.
+- Craftsmanship PASS untuk skenario yang diuji: request dan romanisasi berjalan di worker terpisah dari D-Bus, hasil lama ditolak dengan generation ID, retry tidak membanjiri layanan, dan status tanpa sinkronisasi tidak diberi timing rekaan (C-1/2/3/4/5 dan quality locks).
+
 ## Tahap 3: kartu media
 
 Pemeriksaan menggunakan GTK4/libadwaita pada display GNOME melalui XWayland, Python 3.14 dan dependensi virtualenv. Player Spotify/browser milik pengguna tidak dikontrol selama pengujian. Ubuntu 24.04, Python 3.11/3.12, mixed-DPI, dan fullscreen belum diuji langsung.
