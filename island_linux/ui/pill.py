@@ -1,16 +1,18 @@
-"""Pill tahap 2: metadata ringkas dan polling tanpa memblokir UI."""
+"""Window pill dan koordinasi worker MPRIS dengan kartu media."""
 
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
 import logging
 
 import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango
+from gi.repository import Adw, Gdk, Gio, GLib, Gtk
 
 from island_linux import config
 from island_linux.mpris_client import MediaState, MprisClient
+from .card_media import CardMedia
 
 LOG = logging.getLogger(__name__)
 
@@ -25,28 +27,15 @@ class PillWindow(Gtk.ApplicationWindow):
         self.demo = demo
         self._closed = False
         self._busy = False
+        self._pending_command = None
         self._client = None
+        self._state = None
+        self._demo_index = 0
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="mpris")
         self._timer = 0
 
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
-        box.set_margin_start(config.PADDING)
-        box.set_margin_end(config.PADDING)
-        box.set_margin_top(12)
-        box.set_margin_bottom(12)
-        self.set_child(box)
-        self.status_label = self._label("Mencari player…", "status")
-        self.title_label = self._label("Membaca media", "track-title")
-        self.artist_label = self._label("Menunggu session D-Bus", "artist")
-        for label in (self.status_label, self.title_label, self.artist_label):
-            box.append(label)
-
-        font = Pango.FontDescription.from_string(config.FONT)
-        attributes = Pango.AttrList()
-        attributes.insert(Pango.attr_font_desc_new(font))
-        box.set_tooltip_text("Esc atau Ctrl+Q untuk menutup island-linux")
-        for label in (self.title_label, self.artist_label):
-            label.set_attributes(attributes)
+        self.card = CardMedia(self._command)
+        self.set_child(self.card)
         css = Gtk.CssProvider()
         css.load_from_data(f"""
             window.island {{ background: {config.BACKGROUND}; color: {config.FOREGROUND};
@@ -54,6 +43,17 @@ class PillWindow(Gtk.ApplicationWindow):
             .island .track-title {{ font-weight: 700; }}
             .island .artist {{ color: {config.SECONDARY}; }}
             .island .status {{ color: {config.ACCENT}; font-size: 9pt; }}
+            .island .timing {{ color: {config.SECONDARY}; font-size: 9pt; }}
+            .island .cover {{ color: {config.SECONDARY}; border-radius: 10px; }}
+            .island progressbar trough {{ background: #707070; min-height: 4px; }}
+            .island progressbar progress {{ background: {config.ACCENT}; min-height: 4px; }}
+            .island button.media-control {{ background: #383838; color: {config.FOREGROUND};
+                border: none; border-radius: 10px; box-shadow: none; }}
+            .island button.play-toggle {{ background: #484848; }}
+            .island button.media-control:hover {{ background: #555555; }}
+            .island button.media-control:active {{ background: #626262; }}
+            .island button.media-control:disabled {{ opacity: 0.4; }}
+            .island button.media-control:focus-visible {{ outline: 2px solid {config.ACCENT}; outline-offset: 2px; }}
         """.encode())
         Gtk.StyleContext.add_provider_for_display(self.get_display(), css, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         keys = Gtk.EventControllerKey()
@@ -63,18 +63,12 @@ class PillWindow(Gtk.ApplicationWindow):
         self.connect("close-request", self._close)
 
         if demo:
-            self.show_state(MediaState("demo", "Playing", "Contoh judul lagu", ("Contoh artis",)))
+            self.show_state(MediaState("demo", "Playing", "Contoh lagu 1", ("Contoh artis",),
+                                       duration=210, position=42, can_control=True, can_play=True,
+                                       can_pause=True, can_next=True, can_previous=True))
         else:
             self._poll()
-            self._timer = GLib.timeout_add_seconds(config.POLL_INTERVAL_SECONDS, self._poll)
-
-    @staticmethod
-    def _label(text, css_class):
-        label = Gtk.Label(label=text, xalign=0)
-        label.add_css_class(css_class)
-        label.set_ellipsize(Pango.EllipsizeMode.END)
-        label.set_max_width_chars(34)
-        return label
+        self._timer = GLib.timeout_add_seconds(config.POLL_INTERVAL_SECONDS, self._poll)
 
     def _key_pressed(self, controller, keyval, keycode, state):
         if keyval == Gdk.KEY_Escape:
@@ -121,6 +115,10 @@ class PillWindow(Gtk.ApplicationWindow):
     def _poll(self):
         if self._closed:
             return GLib.SOURCE_REMOVE
+        if self.demo:
+            if self._state.playback_status == "Playing":
+                self.show_state(replace(self._state, position=min(self._state.duration, self._state.position + config.POLL_INTERVAL_SECONDS)))
+            return GLib.SOURCE_CONTINUE
         if not self._busy:
             self._busy = True
             future = self._executor.submit(self._read)
@@ -135,27 +133,62 @@ class PillWindow(Gtk.ApplicationWindow):
             self.show_state(future.result())
         except Exception as exc:
             LOG.warning("Pembacaan media gagal: %s", exc)
-            self._set_text("Koneksi media terputus", "Tidak dapat membaca D-Bus", "Periksa session desktop; mencoba lagi otomatis")
+            self._state = None
+            self.card.show_error()
+            GLib.timeout_add(100, self._place)
+        if self._pending_command is not None:
+            command, expected_player = self._pending_command
+            self._pending_command = None
+            self._start_command(command, expected_player)
+        else:
+            self.card.set_busy(False)
         return GLib.SOURCE_REMOVE
 
-    def _set_text(self, status, title, artist):
-        for label, text in zip((self.status_label, self.title_label, self.artist_label), (status, title, artist)):
-            label.set_text(text)
-            label.set_tooltip_text(text)
-
     def show_state(self, state):
-        if state is None:
-            self._set_text("Tidak ada media aktif", "Putar musik untuk memulai", "Spotify, browser, atau VLC dengan MPRIS")
-        else:
-            status = "Sedang diputar" if state.playback_status == "Playing" else "Dijeda"
-            if self.demo:
-                status = "Demo · " + status
-            self._set_text(status, state.title, state.artist)
+        visibility_changed = (self._state is None) != (state is None)
+        self._state = state
+        self.card.show_state(state, demo=self.demo)
+        if visibility_changed and self.get_mapped():
+            GLib.timeout_add(100, self._place)
+
+    def _command(self, command):
+        if self._closed or self._state is None:
+            return
+        if self.demo:
+            if command == "play_pause":
+                status = "Paused" if self._state.playback_status == "Playing" else "Playing"
+                self.show_state(replace(self._state, playback_status=status))
+            else:
+                self._demo_index = (self._demo_index + (1 if command == "next" else -1)) % 3
+                self.show_state(replace(self._state, title=f"Contoh lagu {self._demo_index + 1}", position=0))
+            return
+        if self._busy:
+            # Klik ketika polling berjalan ditunda, bukan dibuang.
+            if self._pending_command is None:
+                self._pending_command = (command, self._state.bus_name)
+                self.card.set_busy(True)
+            return
+        self._start_command(command, self._state.bus_name)
+
+    def _start_command(self, command, expected_player):
+        self._busy = True
+        self.card.set_busy(True)
+        future = self._executor.submit(self._send_command, command, expected_player)
+        future.add_done_callback(lambda result: GLib.idle_add(self._receive, result))
+
+    def _send_command(self, command, expected_player):
+        # Jangan kirim klik dari kartu lama ke player baru hasil polling.
+        if self._client is None or self._client.active is None or self._client.active.bus_name != expected_player:
+            raise RuntimeError("Player berubah sebelum perintah dikirim")
+        if not getattr(self._client, command)():
+            raise RuntimeError("Player tidak mendukung perintah ini")
+        return self._client.refresh()
 
     def _close(self, window):
         self._closed = True
         if self._timer:
             GLib.source_remove(self._timer)
+        self.card.close()
         self._executor.shutdown(wait=False, cancel_futures=True)
         return False
 
