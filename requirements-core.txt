@@ -1,0 +1,3 @@
+# Dependensi logic yang dapat dipasang pada runner headless tanpa GTK.
+requests>=2.31,<3
+pykakasi>=2.2,<3
