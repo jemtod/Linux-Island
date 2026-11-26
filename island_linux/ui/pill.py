@@ -18,13 +18,14 @@ LOG = logging.getLogger(__name__)
 
 
 class PillWindow(Gtk.ApplicationWindow):
-    def __init__(self, application, demo=False):
+    def __init__(self, application, demo=False, panel_card=False):
         super().__init__(application=application, title="island-linux")
         self.set_decorated(False)
         self.set_resizable(False)
         self.set_default_size(config.COMPACT_WIDTH, -1)
         self.add_css_class("island")
         self.demo = demo
+        self.panel_card = panel_card
         self._closed = False
         self._busy = False
         self._pending_command = None
@@ -113,6 +114,8 @@ class PillWindow(Gtk.ApplicationWindow):
         else:
             self._poll()
         self._timer = GLib.timeout_add_seconds(config.POLL_INTERVAL_SECONDS, self._poll)
+        if panel_card:
+            self.set_expanded(True)
 
     def _key_pressed(self, controller, keyval, keycode, state):
         if keyval == Gdk.KEY_Escape:
@@ -124,6 +127,9 @@ class PillWindow(Gtk.ApplicationWindow):
         return False
 
     def set_expanded(self, expanded):
+        if not expanded and self.panel_card:
+            self.close()
+            return
         self.expanded = expanded
         self.stack.set_visible_child_name("expanded" if expanded else "compact")
         self.set_default_size(config.WIDTH if expanded else config.COMPACT_WIDTH, -1)
@@ -255,9 +261,10 @@ class PillWindow(Gtk.ApplicationWindow):
 
 
 class IslandApplication(Adw.Application):
-    def __init__(self, demo=False):
+    def __init__(self, demo=False, panel_card=False):
         super().__init__(application_id="io.github.island_linux", flags=Gio.ApplicationFlags.NON_UNIQUE)
         self.demo = demo
+        self.panel_card = panel_card
         self.window = None
         quit_action = Gio.SimpleAction.new("quit", None)
         quit_action.connect("activate", lambda *_: self.window.close() if self.window else self.quit())
@@ -266,13 +273,13 @@ class IslandApplication(Adw.Application):
 
     def do_activate(self):
         if self.window is None:
-            self.window = PillWindow(self, demo=self.demo)
+            self.window = PillWindow(self, demo=self.demo, panel_card=self.panel_card)
         self.window.present()
 
 
-def run(demo=False):
+def run(demo=False, panel_card=False):
     Gtk.init()
     if Gdk.Display.get_default() is None:
         print("Display GTK tidak tersedia. Jalankan dari sesi desktop Ubuntu.")
         return 1
-    return IslandApplication(demo=demo).run([])
+    return IslandApplication(demo=demo, panel_card=panel_card).run([])

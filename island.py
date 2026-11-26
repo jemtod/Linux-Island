@@ -16,6 +16,7 @@ def main() -> int:
     modes.add_argument("--inspect", action="store_true", help="Tampilkan satu snapshot MPRIS sebagai JSON")
     modes.add_argument("--demo", action="store_true", help="Tampilkan pill dengan data contoh berlabel demo")
     modes.add_argument("--selftest", action="store_true", help="Uji logic inti offline tanpa GTK, D-Bus, atau display")
+    modes.add_argument("--panel-card", action="store_true", help="Buka kartu lengkap dari extension panel; kecilkan menutup window")
     args = parser.parse_args()
     if args.selftest:
         from island_linux.selftest import run
@@ -26,7 +27,7 @@ def main() -> int:
         os.environ.setdefault("GDK_BACKEND", "x11,wayland")
         try:
             from island_linux.ui.pill import run
-            return run(demo=args.demo)
+            return run(demo=args.demo, panel_card=args.panel_card)
         except (ImportError, ValueError) as exc:
             print(f"GTK4/libadwaita tidak tersedia: {exc}. Lihat paket apt di README.", file=sys.stderr)
             return 1

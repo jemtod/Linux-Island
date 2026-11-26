@@ -1,0 +1,7 @@
+{
+  "uuid": "island-linux@local",
+  "name": "Island Linux · Jam dan Media",
+  "description": "Satukan jam GNOME dan judul MPRIS dalam pill panel. Klik media untuk kartu island-linux.",
+  "shell-version": ["46", "47", "48", "49", "50"],
+  "version": 1
+}
