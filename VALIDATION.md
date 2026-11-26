@@ -1,5 +1,16 @@
 # Validasi runtime
 
+## Extension jam + media
+
+- PASS: source GNOME Shell 50.1 lokal dibaca dari resource `panelMenu.js`/`panel.js` untuk memeriksa actor container jam dan parent panel. Sintaks ES module extension diperiksa dengan Node.
+- PASS: ZIP extension berhasil dibuat melalui `tools/package_extension.py` dan dipasang pada direktori extension akun pengguna. Launcher menyimpan path interpreter virtualenv dan island.py secara absolut; argv dikirim langsung melalui Gio.Subprocess, tanpa shell interpolation.
+- PASS: extension dijalankan pada GNOME Shell 50.1 headless terisolasi, display virtual 1366×768, session D-Bus dan XDG config/data terpisah. GNOME melaporkan ACTIVE; siklus ACTIVE → INACTIVE → ACTIVE berhasil dan GetExtensionErrors mengembalikan array kosong. Sesi desktop utama tidak dimulai ulang.
+- PASS: kartu `panel_card=True` pada display nyata langsung tampil penuh; tombol Kecilkan menutup window dan membersihkan worker, tanpa kembali ke pill standalone. 68 unit test lulus, termasuk konflik mode CLI baru.
+- Batas: klik tombol media/kalender di panel utama dan penampilan visual panel belum diverifikasi pada sesi utama, karena extension baru belum dikenal sampai logout/login. UserExtensionsEnabled pada sesi utama juga false; sakelar Extensions perlu diaktifkan pengguna. Perangkat sentuh dan GNOME 46–49 belum diuji.
+- Delivery Gate Hard PASS untuk bagian yang diuji: tidak ada aset rekaan, label media memiliki accessible name, tombol native St menyediakan aktivasi/keyboard, style hover/active/focus ditulis. Palet mengikuti warna pill sebelumnya. Mode kartu dijalankan nyata dan extension aktif pada Shell terisolasi. Hasil ini tidak mengklaim klik end-to-end pada panel utama.
+- Delivery Gate Purpose/Liveliness PASS: arah pengguna adalah menyatu dengan jam; satu latar membungkus actor jam asli dan tombol media. Hierarki ringkas di panel serta kartu saat diminta mempertahankan ENERGY/RHYTHM/MOTION 1/1/1; alasan desain dicatat di DESIGN.md.
+- Delivery Gate Craftsmanship PASS dalam cakupan runtime tersebut: pengambilan metadata asinkron, satu subprocess inspeksi pada satu waktu, hanya satu kartu per instance, disable mengembalikan actor jam, menghentikan timer dan proses milik extension. Interaksi/visual panel utama tetap merupakan langkah verifikasi setelah login ulang.
+
 ## Pembaruan pill kecil dan posisi tengah atas
 
 - PASS: pill demo dijalankan pada GNOME/XWayland dan hasil render diperiksa. `xwininfo` menunjukkan ukuran 200×40 di (583,40), kartu terbuka 380×288 di (493,40), lalu kembali ke 200×40 di (583,40), pada monitor 1366×768. Pusat horizontal ketiganya tetap 683.

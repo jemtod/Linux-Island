@@ -28,7 +28,7 @@ def test_selftest_reports_failure_and_nonzero_exit(monkeypatch, capsys):
     assert "FAIL: MPRIS" in capsys.readouterr().out
 
 
-@pytest.mark.parametrize("options", [["--selftest", "--demo"], ["--inspect", "--demo"]])
+@pytest.mark.parametrize("options", [["--selftest", "--demo"], ["--inspect", "--demo"], ["--panel-card", "--demo"]])
 def test_cli_rejects_conflicting_modes(options):
     root = Path(__file__).resolve().parents[1]
     result = subprocess.run([sys.executable, str(root / "island.py"), *options],

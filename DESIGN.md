@@ -38,3 +38,10 @@ Kontras terukur terhadap latar: judul 14.94:1, artis 9.34:1, status 10.45:1.
 - Bentuk kecil dan kartu penuh memakai warna/radius yang sama agar terbaca sebagai widget yang sama. Stack tidak homogen memungkinkan ukuran window benar-benar mengecil.
 - Tombol native memenuhi aktivasi pointer/sentuhan dan Enter/Space; label aksesibel serta outline fokus tersedia. `Kecilkan` memberi jalan kembali tanpa harus menebak gesture.
 - Perubahan ukuran langsung tanpa animasi mengikuti MOTION 1. Koordinat dihitung ulang sesudah alokasi GTK agar pusat tetap sejajar saat ukuran berganti.
+
+## Jam dan media dalam panel
+
+- Permintaan lanjutan pengguna memindahkan indikator ringkas ke panel native GNOME. Jam dan tombol lagu memiliki satu latar #202020 dengan ujung bulat, sehingga tidak ada pill yang mengambang di bawah jam.
+- Jam/kalender tetap actor asli GNOME; tombol media berada di sebelahnya agar dua aksi tidak bertabrakan. Menonaktifkan extension mengembalikan actor jam ke tempat semula.
+- Judul dibatasi 150 piksel dan ikon 12 piksel agar indikator tidak menghabiskan lebar panel. Teks/ikon memakai warna pill yang sudah diuji kontras.
+- Kartu lengkap tetap memakai GTK dan dibuka saat diminta. Kecilkan/Esc menutup kartu pada mode panel agar tidak menyisakan indikator kedua.

@@ -6,6 +6,39 @@ Versi lite menyediakan cover, metadata, progress, kontrol media, serta lirik sin
 
 Pill mulai kecil (200×40) di tengah atas, tepat di bawah panel jam GNOME. Klik/sentuh pill untuk membuka kartu lengkap. Tombol `Kecilkan` atau Esc mengembalikannya ke bentuk kecil; Esc saat sudah kecil menutup aplikasi. Ctrl+Q selalu menutup saat window fokus. Aktivasi melalui Enter/Space juga didukung. Bentuk membesar langsung tanpa animasi; tidak membuka otomatis saat hover.
 
+Alternatif **menyatu dengan jam panel** tersedia melalui extension lokal, lihat bagian berikut. Dalam mode itu, jam dan judul lagu berada di dalam satu latar pill pada panel GNOME; tidak ada window kecil terpisah.
+
+## Menyatu dengan jam GNOME
+
+Extension `Island Linux · Jam dan Media` mengelompokkan jam asli GNOME dengan tombol judul media pada panel atas. Klik jam tetap membuka kalender asli; klik judul lagu membuka kartu lengkap. Tombol Kecilkan atau Esc pada kartu menutup window, sehingga indikator ringkas hanya berada di panel. Tidak perlu menjalankan `python island.py` terus-menerus; tutup window standalone yang sudah terbuka agar tidak ada pill kedua.
+
+Extension ditujukan ke GNOME Shell 46–50, dengan runtime diuji pada GNOME 50.1. Versi lain dalam rentang tersebut masih memerlukan uji pengguna, terutama jika memakai extension pengubah panel/jam. Indikator menyatu memakai widget native Shell pada Wayland maupun X11; kartu lengkap tetap GTK dengan batas backend yang dijelaskan di bawah.
+
+Setelah dependensi aplikasi terpasang, buat paket dari folder proyek menggunakan Python virtualenv GUI:
+
+```bash
+source .venv/bin/activate
+python tools/package_extension.py
+gnome-extensions install --force dist/island-linux@local.shell-extension.zip
+```
+
+Untuk instalasi baru pada Wayland, logout lalu login kembali agar GNOME mengenali extension lokal. Setelah login, aktifkan:
+
+```bash
+gnome-extensions enable island-linux@local
+gnome-extensions info island-linux@local
+```
+
+Jika extension pengguna sedang dinonaktifkan secara global, buka aplikasi **Extensions**, aktifkan sakelar extension pengguna, lalu aktifkan **Island Linux · Jam dan Media**. Status yang diharapkan adalah `ACTIVE`. Pada workspace pengembangan ini paket sudah dipasang; sesi saat pemasangan belum mengenali UUID baru sehingga tetap memerlukan logout/login.
+
+Putar lagu: judul pada panel diperbarui setiap dua detik melalui MPRIS. Klik judul untuk melihat cover/kontrol/lirik, lalu klik Kecilkan. Klik jam untuk memastikan kalender tetap terbuka. Menonaktifkan extension mengembalikan jam ke parent panel semula:
+
+```bash
+gnome-extensions disable island-linux@local
+```
+
+Paket menyimpan path absolut interpreter virtualenv dan proyek di `launcher.json`. Jika folder proyek atau virtualenv dipindahkan, buat/pasang paket ulang. Extension menjalankan `--inspect` secara asinkron setiap dua detik dan hanya mengizinkan satu kartu terbuka per instance extension. Ia tidak menambah konfigurasi autostart aplikasi standalone. Mode CLI `--panel-card` bisa diuji sendiri dengan `python island.py --panel-card`.
+
 ## Instalasi
 
 Target proyek: Ubuntu 24.04 LTS dengan GNOME, Python 3.11+ (Python bawaan Ubuntu 24.04 adalah 3.12), GTK4 dan libadwaita. Gunakan Python sistem Ubuntu untuk GUI agar binding `python3-gi` cocok dengan interpreter. Virtualenv menggunakan `--system-site-packages` untuk mengakses binding tersebut. Jalankan aplikasi dari sesi desktop pengguna, bukan lewat sudo, agar memakai session D-Bus yang sama dengan player.
@@ -47,7 +80,7 @@ python3 island.py --selftest
 
 Hasil yang diharapkan: dua baris `PASS`, satu untuk MPRIS dan satu untuk lirik, dengan exit code 0. Bila pemeriksaan gagal, muncul `FAIL` dan exit code 1. Pemeriksaan meliputi metadata dan satuan waktu, prioritas player, tiga kontrol mock, fallback LRCLIB, cache, pemilihan baris, dan alur romanisasi mock. Selftest tidak menguji koneksi bus nyata, layanan LRCLIB, GTK, atau kamus pykakasi; gunakan pytest dan uji integrasi desktop untuk cakupan itu.
 
-Mode `--selftest`, `--inspect`, dan `--demo` saling eksklusif. Tanpa opsi, aplikasi membuka GUI. `--inspect` membutuhkan pydbus dan session bus nyata, tetapi tidak membuka window.
+Mode `--selftest`, `--inspect`, `--demo`, dan `--panel-card` saling eksklusif. Tanpa opsi, aplikasi membuka GUI. `--inspect` membutuhkan pydbus dan session bus nyata, tetapi tidak membuka window.
 
 [Workflow CI](.github/workflows/ci.yml) menjalankan pytest dan selftest pada Python 3.11 serta 3.12 di runner Ubuntu 24.04. Runner hanya memasang dependensi logic/test. Pengujian yang memerlukan GTK/display berada di `tests/manual_media_ui.py`, di luar pola koleksi `test_*.py`, sehingga tidak dijalankan pada CI headless. Workflow baru berjalan setelah repository di-push ke GitHub; hasil lokal bukan bukti bahwa GitHub Actions sudah berjalan.
 
@@ -66,6 +99,8 @@ island_linux/
     artwork.py             # Pembacaan cover lokal/HTTP
     x11.py                 # Hint posisi dan above pada X11
 tests/                     # Unit test headless dan uji desktop opsional
+gnome-extension/            # Extension lokal jam + media pada panel
+tools/package_extension.py # Paket ZIP dengan path launcher lokal
 .github/workflows/ci.yml    # Matrix Python 3.11/3.12
 ```
 
@@ -128,7 +163,7 @@ GDK_BACKEND=wayland python island.py
 
 Pada Wayland native, GTK4 tidak menyediakan posisi absolut/always-on-top: window biasa tetap muncul dan terminal memberi peringatan. Jangan gunakan backend native jika membutuhkan kedua fitur itu sekarang. Pada mesin tanpa XWayland, gunakan fallback native atau aktifkan XWayland pada sistem.
 
-Ubah `POSITION` (`top-center` sebagai default, `top-right`, `top-left`, `bottom-center`, `bottom-right`, `bottom-left`), `OFFSET_X`, `OFFSET_Y`, `COMPACT_WIDTH`, `WIDTH`, font, dan warna di `island_linux/config.py`, lalu jalankan ulang. Posisi awal mengacu ke monitor utama X11. Pada posisi center, `OFFSET_X` diabaikan agar pill tetap tepat di tengah meskipun ukurannya berubah. `OFFSET_Y=40` memberi jarak dari tepi atas untuk panel GNOME standar; sesuaikan jika tinggi panel berbeda. Widget ini tidak menggantikan atau menempel di dalam panel jam GNOME; integrasi panel membutuhkan extension GNOME tersendiri. Mixed-DPI/multi-monitor dan fullscreen perlu diuji lagi; always-on-top tidak berarti overlay di atas fullscreen, layar kunci, atau GNOME Overview.
+Ubah `POSITION` (`top-center` sebagai default, `top-right`, `top-left`, `bottom-center`, `bottom-right`, `bottom-left`), `OFFSET_X`, `OFFSET_Y`, `COMPACT_WIDTH`, `WIDTH`, font, dan warna di `island_linux/config.py`, lalu jalankan ulang. Posisi window mengacu ke monitor utama X11. Pada posisi center, `OFFSET_X` diabaikan agar pill tetap tepat di tengah meskipun ukurannya berubah. `OFFSET_Y=40` memberi jarak dari tepi atas untuk panel GNOME standar; sesuaikan jika tinggi panel berbeda. Pengaturan window ini terpisah dari indikator panel extension. Mixed-DPI/multi-monitor dan fullscreen perlu diuji lagi; always-on-top tidak berarti overlay di atas fullscreen, layar kunci, atau GNOME Overview.
 
 Layout dan alasan warna dicatat di [DESIGN.md](DESIGN.md). Pengujian GTK memerlukan display; unit test tetap dapat dijalankan headless.
 
