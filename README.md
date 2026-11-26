@@ -4,9 +4,15 @@ Widget floating kecil untuk GNOME/Ubuntu. Versi lite berfokus pada media MPRIS d
 
 Inspired by [taskbar-island](https://github.com/xfwil/taskbar-island).
 
-## Screenshot
+## Screenshots
 
-![Island Linux in compact mode](docs/media/compact.png)
+Expanded media card with playback controls and synced lyrics:
+
+![Island Linux media card with artwork, playback controls, and synced lyrics](docs/media/expanded.png)
+
+Compact media indicator in the GNOME panel:
+
+![Island Linux compact media indicator beside the GNOME clock](docs/media/compact.png)
 
 ## Video demo
 
