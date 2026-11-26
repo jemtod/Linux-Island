@@ -12,9 +12,14 @@ from island_linux.mpris_client import MprisClient, MprisError
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="island-linux: widget media MPRIS")
-    parser.add_argument("--inspect", action="store_true", help="Tampilkan satu snapshot MPRIS sebagai JSON")
-    parser.add_argument("--demo", action="store_true", help="Tampilkan pill dengan data contoh berlabel demo")
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument("--inspect", action="store_true", help="Tampilkan satu snapshot MPRIS sebagai JSON")
+    modes.add_argument("--demo", action="store_true", help="Tampilkan pill dengan data contoh berlabel demo")
+    modes.add_argument("--selftest", action="store_true", help="Uji logic inti offline tanpa GTK, D-Bus, atau display")
     args = parser.parse_args()
+    if args.selftest:
+        from island_linux.selftest import run
+        return run()
     if not args.inspect:
         # XWayland memberi akses ke hint posisi/above yang tidak ada di GTK4 Wayland.
         # Pilihan backend eksplisit dari pengguna tetap dihormati.
