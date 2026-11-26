@@ -14,9 +14,9 @@ Compact media indicator in the GNOME panel:
 
 ![Island Linux compact media indicator beside the GNOME clock](docs/media/compact.png)
 
-## Video demo
+## Demo
 
-[Watch the demo](docs/media/demo.mp4)
+![Demo](docs/media/demo.gif)
 
 ## Overview
 
