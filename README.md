@@ -1,6 +1,18 @@
 # island-linux
 
-Widget floating kecil untuk GNOME/Ubuntu, terinspirasi dari [taskbar-island](https://github.com/xfwil/taskbar-island) versi Windows. Versi lite berfokus pada media MPRIS dan lirik sinkron LRCLIB.
+Widget floating kecil untuk GNOME/Ubuntu. Versi lite berfokus pada media MPRIS dan lirik sinkron LRCLIB.
+
+Inspired by [taskbar-island](https://github.com/xfwil/taskbar-island).
+
+## Screenshot
+
+![Island Linux in compact mode](docs/media/compact.png)
+
+## Video demo
+
+[Watch the demo](docs/media/demo.mp4)
+
+## Overview
 
 Versi lite menyediakan cover, metadata, progress, kontrol media, serta lirik sinkron LRCLIB dan romanisasi Jepang. Logic MPRIS dan lirik terpisah dari GTK agar bisa diuji headless. Kartu Claude usage dan launcher belum termasuk versi ini.
 
@@ -191,4 +203,6 @@ Kartu Claude usage, launcher tiles, auto-hide fullscreen, dan dukungan layer-she
 
 ## Lisensi dan kredit
 
-MIT, lihat [LICENSE](LICENSE). taskbar-island menjadi inspirasi konsep; kode proyek ini ditulis untuk Linux dengan MPRIS.
+MIT, lihat [LICENSE](LICENSE).
+
+Inspired by [taskbar-island](https://github.com/xfwil/taskbar-island). This project is built for Linux using MPRIS.
