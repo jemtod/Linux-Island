@@ -2,31 +2,69 @@
 
 Widget floating kecil untuk GNOME/Ubuntu, terinspirasi dari [taskbar-island](https://github.com/xfwil/taskbar-island) versi Windows. Versi lite berfokus pada media MPRIS dan lirik sinkron LRCLIB.
 
-Saat ini tahap 4 tersedia: client MPRIS dan pill GTK4/libadwaita dengan cover, metadata, progress, kontrol media, serta lirik sinkron LRCLIB dan romanisasi Jepang. `--selftest` dan CI menyusul pada tahap 5.
+Versi lite menyediakan cover, metadata, progress, kontrol media, serta lirik sinkron LRCLIB dan romanisasi Jepang. Logic MPRIS dan lirik terpisah dari GTK agar bisa diuji headless. Kartu Claude usage dan launcher belum termasuk versi ini.
 
 ## Instalasi
 
-Target proyek: Ubuntu 24.04 LTS, Python 3.11+. Jalankan dari sesi desktop pengguna, bukan lewat sudo, agar memakai session D-Bus yang sama dengan player.
+Target proyek: Ubuntu 24.04 LTS dengan GNOME, Python 3.11+ (Python bawaan Ubuntu 24.04 adalah 3.12), GTK4 dan libadwaita. Gunakan Python sistem Ubuntu untuk GUI agar binding `python3-gi` cocok dengan interpreter. Virtualenv menggunakan `--system-site-packages` untuk mengakses binding tersebut. Jalankan aplikasi dari sesi desktop pengguna, bukan lewat sudo, agar memakai session D-Bus yang sama dengan player.
 
 ```bash
 sudo apt update
-sudo apt install python3-venv python3-gi python3-gi-cairo gir1.2-gtk-4.0 gir1.2-adw-1
+sudo apt install python3-venv python3-gi python3-gi-cairo gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-gdkpixbuf-2.0 libx11-6 xwayland dbus
 cd island-linux
 python3 -m venv --system-site-packages .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt -r requirements-dev.txt
 python -m pytest -q
+python island.py --selftest
 python island.py --inspect
 python island.py
 ```
 
 Putar lagu di Spotify, browser yang mengaktifkan MPRIS, atau VLC. `--inspect` mencetak JSON berisi judul, daftar artis, URL cover, durasi dan posisi dalam detik. Jeda player lalu ulangi: status menjadi `Paused`. Tutup semua player: muncul status kosong. Perintah ini mengambil satu snapshot; jalankan ulang untuk melihat perubahan.
 
-Pengujian logic saja tidak memerlukan GTK, pydbus, koneksi jaringan, atau display:
+Instalasi membutuhkan internet; pengujian logic berikut berjalan tanpa GTK, pydbus, koneksi jaringan, atau display. Gunakan virtualenv terpisah jika ingin menguji lingkungan minimal:
 
 ```bash
-python3 -m pip install -r requirements-dev.txt
-python3 -m pytest -q
+python3 -m venv .venv-headless
+source .venv-headless/bin/activate
+python -m pip install -r requirements-core.txt -r requirements-dev.txt
+python -m pytest -q
+deactivate
+```
+
+Folder `.venv-headless` tidak diperlukan untuk menjalankan GUI. Aktifkan kembali `.venv` sebelum menjalankan pill.
+
+## Selftest dan CI
+
+Selftest hanya memerlukan Python standar, bahkan tanpa dependensi pip:
+
+```bash
+python3 island.py --selftest
+```
+
+Hasil yang diharapkan: dua baris `PASS`, satu untuk MPRIS dan satu untuk lirik, dengan exit code 0. Bila pemeriksaan gagal, muncul `FAIL` dan exit code 1. Pemeriksaan meliputi metadata dan satuan waktu, prioritas player, tiga kontrol mock, fallback LRCLIB, cache, pemilihan baris, dan alur romanisasi mock. Selftest tidak menguji koneksi bus nyata, layanan LRCLIB, GTK, atau kamus pykakasi; gunakan pytest dan uji integrasi desktop untuk cakupan itu.
+
+Mode `--selftest`, `--inspect`, dan `--demo` saling eksklusif. Tanpa opsi, aplikasi membuka GUI. `--inspect` membutuhkan pydbus dan session bus nyata, tetapi tidak membuka window.
+
+[Workflow CI](.github/workflows/ci.yml) menjalankan pytest dan selftest pada Python 3.11 serta 3.12 di runner Ubuntu 24.04. Runner hanya memasang dependensi logic/test. Pengujian yang memerlukan GTK/display berada di `tests/manual_media_ui.py`, di luar pola koleksi `test_*.py`, sehingga tidak dijalankan pada CI headless. Workflow baru berjalan setelah repository di-push ke GitHub; hasil lokal bukan bukti bahwa GitHub Actions sudah berjalan.
+
+## Struktur proyek
+
+```text
+island.py                  # CLI, inspeksi, selftest, atau GUI
+island_linux/
+  config.py                # Posisi, tema, font, identitas LRCLIB
+  mpris_client.py          # Seleksi player, metadata, kontrol
+  lyrics.py                # LRCLIB, parser LRC, romanisasi, cache
+  selftest.py              # Pemeriksaan logic offline
+  ui/
+    pill.py                # Window dan worker D-Bus
+    card_media.py          # Kartu media dan worker lirik/cover
+    artwork.py             # Pembacaan cover lokal/HTTP
+    x11.py                 # Hint posisi dan above pada X11
+tests/                     # Unit test headless dan uji desktop opsional
+.github/workflows/ci.yml    # Matrix Python 3.11/3.12
 ```
 
 ## Menguji kartu media
@@ -53,7 +91,7 @@ dbus-run-session -- env ISLAND_TEST_BUS=1 python tests/manual_media_ui.py
 
 Window uji muncul sebentar, memuat cover fixture lokal, menjalankan ketiga kontrol, memeriksa antrean klik saat polling, urutan fokus keyboard, sinkronisasi lirik, dan romaji, lalu menutup. Hasil yang diharapkan: baris `PASS: D-Bus, cover, progress, kontrol, fokus, lirik, romaji, seek maju/mundur, respons lagu lama`. HTTP LRCLIB dimock memakai `responses`; tidak ada akses internet dari skrip uji ini. Skrip tidak termasuk koleksi pytest headless dan tidak mengontrol player di session desktop utama. Beberapa sistem menampilkan log portal GNOME selama session uji dibuat/dihentikan.
 
-## Menguji lirik tahap 4
+## Menguji lirik
 
 Perbarui dependensi pada virtualenv aktif, lalu jalankan demo tanpa internet:
 
@@ -77,6 +115,8 @@ Romanisasi memakai pykakasi dalam worker dan mempertahankan teks asli. Deteksi d
 
 Header identitas client dapat diubah melalui `LRCLIB_USER_AGENT` di config.py. Nilai bawaan menandai build lokal; tambahkan URL proyek publik atau kontak yang benar bila mendistribusikannya. Referensi implementasi: [API LRCLIB](https://lrclib.net/docs.md) dan [API pykakasi](https://pykakasi.readthedocs.io/en/latest/api.html).
 
+## Posisi dan backend desktop
+
 Secara default entry point mencoba backend X11, termasuk XWayland di GNOME Wayland, lalu fallback Wayland. Hint EWMH `ABOVE` dan posisi sudut dikirim melalui libX11; tidak memerlukan wmctrl atau layer-shell. Compositor tetap menentukan hasil akhirnya. Jika ingin memilih backend secara eksplisit:
 
 ```bash
@@ -96,14 +136,21 @@ Hanya service `org.mpris.MediaPlayer2.*` yang dipindai. Player Playing didahuluk
 
 `play_pause()`, `next()` dan `previous()` mengembalikan `False` bila tidak ada player atau capability tidak mendukung. Kegagalan perintah/bus menghasilkan `MprisError`. Player yang hilang saat dipindai dilewati. Import pydbus ditunda hingga koneksi nyata dibuat sehingga test mock bisa berjalan headless.
 
-Metadata tidak selalu lengkap. Durasi/posisi tidak valid dianggap nol, progres dibatasi 0 sampai 1. URL cover disimpan apa adanya; pengunduhan akan ditambahkan bersama kartu media. Dukungan browser bergantung pada integrasi MPRIS dan metadata situs.
+Metadata tidak selalu lengkap. Durasi/posisi tidak valid dianggap nol, progres dibatasi 0 sampai 1. URL cover diteruskan ke worker pemuatan kartu media. Dukungan browser bergantung pada integrasi MPRIS dan metadata situs.
 
-## Tahap berikutnya
+## Batas versi lite dan troubleshooting
 
-1. `--selftest` untuk logic inti tanpa GUI.
-2. CI Python 3.11/3.12 dan finalisasi dokumentasi versi lite.
+- Jika `import gi` gagal, pastikan memakai Python sistem dan virtualenv dibuat dengan `--system-site-packages`. Interpreter unduhan atau versi Python lain belum tentu dapat memuat binding apt.
+- Jika player tidak terdeteksi, jalankan `python island.py --inspect` dari terminal sesi desktop yang sama. Periksa bahwa player/browser mengekspos service MPRIS; hanya status Playing/Paused yang dipilih.
+- Durasi, posisi, cover, dan capability mengikuti data player. Metadata yang kurang atau posisi yang jarang diperbarui bisa membuat tampilan tidak lengkap/terlambat.
+- LRCLIB tidak selalu memiliki lagu atau versi rekaman yang cocok. Romanisasi otomatis memiliki batas bacaan kanji; deteksi karakter Han juga dapat menangkap bahasa selain Jepang.
+- Wayland native belum mendukung posisi sudut/above. Backend XWayland memakai hint compositor; fullscreen, GNOME Overview, mixed-DPI, dan multi-monitor belum dijamin.
+- Progress belum dapat dipakai seek. Belum ada hover-expand, autostart, atau installer desktop; tampilan aktif selalu penuh. Esc/Ctrl+Q saat window fokus menutup aplikasi.
+- Worker memakai timeout jaringan, tetapi penutupan proses dapat menunggu request aktif selesai. Cache lirik hanya bertahan selama proses berjalan.
 
-Roadmap setelah versi lite: kartu Claude usage, launcher tiles, auto-hide fullscreen, dan layer-shell Wayland.
+## Roadmap
+
+Kartu Claude usage, launcher tiles, auto-hide fullscreen, dan dukungan layer-shell Wayland menyusul setelah versi lite. Bukti pengujian dan batas lingkungan dicatat di [VALIDATION.md](VALIDATION.md).
 
 ## Lisensi dan kredit
 

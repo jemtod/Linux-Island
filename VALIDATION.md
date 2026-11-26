@@ -1,5 +1,22 @@
 # Validasi runtime
 
+## Tahap 5: selftest, CI, dan dokumentasi
+
+- PASS: `python3 -S -O island.py --selftest` menghasilkan dua PASS dengan exit code 0. Opsi `-S` menonaktifkan site-packages; `-O` memastikan pemeriksaan tidak bergantung pada assert yang bisa dihapus interpreter.
+- PASS: subprocess selftest diuji dengan DISPLAY, WAYLAND_DISPLAY, dan DBUS_SESSION_BUS_ADDRESS dikeluarkan dari environment. Kegagalan pemeriksaan menghasilkan FAIL/exit code 1; kombinasi mode CLI yang bertentangan ditolak.
+- PASS: 67 test pada virtualenv proyek, lalu 67 test pada virtualenv baru `/tmp/island-headless-stage5` tanpa GTK/pydbus. Virtualenv baru hanya memasang requirements-core.txt dan requirements-dev.txt; romanisasi pykakasi nyata ikut diuji. `pip check` tidak menemukan dependensi rusak.
+- PASS: kompilasi Python, `git diff --check`, dan pembacaan YAML workflow; matrix berisi Python 3.11 dan 3.12.
+- Batas: interpreter lokal yang tersedia adalah Python 3.14. Pengujian Python 3.11/3.12 ditetapkan dalam workflow, belum dieksekusi di lingkungan ini. GitHub Actions belum berjalan karena proyek belum dipublikasikan/push ke GitHub. Tidak ada klaim bahwa selftest memeriksa player, GTK, atau jaringan nyata.
+- Dokumentasi mencakup paket apt, perbedaan Python sistem/binding GI, virtualenv GUI/headless, semua mode CLI, struktur modul, known limitations, kredit inspirasi, MIT, dan roadmap. Perubahan LICENSE yang sudah ada di workspace tidak dimasukkan dalam commit tahap ini.
+
+### Delivery Gate tahap 5
+
+- Hard Gate PASS: selftest dan CLI dijalankan nyata, termasuk jalur gagal dan konflik opsi; tidak ada fitur baru yang memerlukan klik UI. Copy Indonesia baru tidak memakai em dash atau klaim hasil CI yang belum terjadi (R-02/26/35/36).
+- Hard Gate PASS: tidak ada aset visual, angka pemasaran, testimoni, navigasi UI, atau state GUI baru. Batas selftest dijelaskan di output dan README (R-17/18/23/24/27/28/38).
+- Purpose Gate PASS: tahap ini hanya menambahkan pemeriksaan logic/CI/dokumentasi; tidak ada dekorasi atau keputusan visual baru. Bukti kontras dan UI tahap 4 tetap tercatat di bawah.
+- Liveliness PASS: arah pill ENERGY/RHYTHM/MOTION 1/1/1 tidak berubah; pekerjaan tahap ini tidak mengubah tampilan.
+- Craftsmanship PASS: core/test dependency dipisahkan agar runner headless tidak perlu binding GTK, CLI mode eksklusif, selftest offline tidak bergantung pada dependency pengujian pip, dan instruksi README sesuai file final (C-1/2/3/4/5).
+
 ## Tahap 4: lirik sinkron
 
 - PASS: 63 test headless pada virtualenv Python 3.14, termasuk 35 kasus baru untuk format JSON LRCLIB, timestamp pecahan/berulang, offset, baris kosong, batas waktu pemilihan baris, fallback, cache, metadata kurang, HTTP error/timeout, Retry-After, dan pykakasi nyata.
