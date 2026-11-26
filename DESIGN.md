@@ -9,7 +9,7 @@ Widget pendamping desktop untuk melihat lagu tanpa membuka player. ENERGY 1, RHY
 - Sans sistem mendukung karakter Jepang dan mengikuti lingkungan GNOME tanpa font unduhan.
 - Padding horizontal 20 dan vertikal 16/14 memberi ruang pada ujung lengkung; lebar 380 menampung cover dan metadata tanpa memperbesar jejak desktop berlebihan.
 - Elipsis membatasi judul panjang; tooltip menyimpan teks lengkap tanpa markup dari metadata.
-- Tidak ada hover-expand pada tahap awal agar isi stabil. Esc dan Ctrl+Q menutup window; Alt+drag (atau Super+drag sesuai pengaturan GNOME) dapat dipakai memindahkan window.
+- Tidak ada hover-expand agar pill tidak membesar tanpa sengaja saat pointer melintas. Klik/sentuhan membuka kartu, Esc mengecilkan lebih dulu, Ctrl+Q menutup window.
 
 Kontras terukur terhadap latar: judul 14.94:1, artis 9.34:1, status 10.45:1.
 
@@ -30,3 +30,11 @@ Kontras terukur terhadap latar: judul 14.94:1, artis 9.34:1, status 10.45:1.
 - Teks asli tetap terlihat pada lirik Jepang; romaji membantu membaca tanpa menggantikan sumber.
 - Lirik panjang memakai elipsis dan tooltip penuh agar pill tetap 380 piksel. Ukuran kartu aktif terukur 380×243 pada lingkungan uji.
 - Pesan mencari, gagal, tidak ditemukan, instrumental, dan tanpa timestamp memakai area yang sama agar kontrol media tetap tersedia.
+
+## Pill kecil di dekat jam
+
+- Posisi top-center menyelaraskan pusat pill dengan jam GNOME, mengikuti referensi pengguna. Jarak atas 40 mempertahankan akses ke panel.
+- Ukuran awal 200×40 menampilkan ikon status playback dan judul singkat; kontrol serta lirik dibuka sesuai kebutuhan agar tidak menutupi pekerjaan.
+- Bentuk kecil dan kartu penuh memakai warna/radius yang sama agar terbaca sebagai widget yang sama. Stack tidak homogen memungkinkan ukuran window benar-benar mengecil.
+- Tombol native memenuhi aktivasi pointer/sentuhan dan Enter/Space; label aksesibel serta outline fokus tersedia. `Kecilkan` memberi jalan kembali tanpa harus menebak gesture.
+- Perubahan ukuran langsung tanpa animasi mengikuti MOTION 1. Koordinat dihitung ulang sesudah alokasi GTK agar pusat tetap sejajar saat ukuran berganti.

@@ -96,6 +96,8 @@ def main():
                 assert attempts < 100, "Uji melampaui batas waktu"
                 window = app.window
                 card = window.card
+                if not window.expanded:
+                    window.compact_button.emit("clicked")
                 if window._state is None or window._busy:
                     return GLib.SOURCE_CONTINUE
                 if stage == 0:

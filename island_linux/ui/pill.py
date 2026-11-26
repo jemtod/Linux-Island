@@ -8,7 +8,7 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, Gdk, Gio, GLib, Gtk
+from gi.repository import Adw, Gdk, Gio, GLib, Gtk, Pango
 
 from island_linux import config
 from island_linux.mpris_client import MediaState, MprisClient
@@ -22,7 +22,7 @@ class PillWindow(Gtk.ApplicationWindow):
         super().__init__(application=application, title="island-linux")
         self.set_decorated(False)
         self.set_resizable(False)
-        self.set_default_size(config.WIDTH, -1)
+        self.set_default_size(config.COMPACT_WIDTH, -1)
         self.add_css_class("island")
         self.demo = demo
         self._closed = False
@@ -33,9 +33,42 @@ class PillWindow(Gtk.ApplicationWindow):
         self._demo_index = 0
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="mpris")
         self._timer = 0
+        self.expanded = False
 
         self.card = CardMedia(self._command)
-        self.set_child(self.card)
+        self.stack = Gtk.Stack()
+        self.stack.set_hhomogeneous(False)
+        self.stack.set_vhomogeneous(False)
+        self.set_child(self.stack)
+        self.compact_button = Gtk.Button()
+        self.compact_button.add_css_class("compact-toggle")
+        self.compact_button.set_cursor_from_name("pointer")
+        self.compact_button.set_tooltip_text("Buka kartu media · Enter atau Space")
+        self.compact_button.update_property([Gtk.AccessibleProperty.LABEL], ["Buka kartu media"])
+        compact_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        compact_box.set_halign(Gtk.Align.CENTER)
+        self.compact_icon = Gtk.Image.new_from_icon_name("audio-x-generic-symbolic")
+        compact_box.append(self.compact_icon)
+        self.compact_label = Gtk.Label(label="Mencari media…")
+        self.compact_label.set_ellipsize(Pango.EllipsizeMode.END)
+        self.compact_label.set_width_chars(1)
+        self.compact_label.set_max_width_chars(18)
+        compact_box.append(self.compact_label)
+        self.compact_button.set_child(compact_box)
+        self.compact_button.connect("clicked", lambda *_: self.set_expanded(True))
+        self.stack.add_named(self.compact_button, "compact")
+        expanded_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.collapse_button = Gtk.Button(label="Kecilkan")
+        self.collapse_button.add_css_class("collapse-toggle")
+        self.collapse_button.set_cursor_from_name("pointer")
+        self.collapse_button.set_halign(Gtk.Align.END)
+        self.collapse_button.set_margin_end(20)
+        self.collapse_button.set_margin_top(10)
+        self.collapse_button.connect("clicked", lambda *_: self.set_expanded(False))
+        expanded_box.append(self.collapse_button)
+        expanded_box.append(self.card)
+        self.stack.add_named(expanded_box, "expanded")
+        self.stack.set_visible_child_name("compact")
         css = Gtk.CssProvider()
         css.load_from_data(f"""
             window.island {{ background: {config.BACKGROUND}; color: {config.FOREGROUND};
@@ -56,6 +89,15 @@ class PillWindow(Gtk.ApplicationWindow):
             .island button.media-control:active {{ background: #626262; }}
             .island button.media-control:disabled {{ opacity: 0.4; }}
             .island button.media-control:focus-visible {{ outline: 2px solid {config.ACCENT}; outline-offset: 2px; }}
+            .island button.compact-toggle {{ background: transparent; color: {config.FOREGROUND};
+                border: none; box-shadow: none; border-radius: 22px; padding: 10px 16px; min-height: 20px; }}
+            .island button.compact-toggle image {{ color: {config.ACCENT}; }}
+            .island button.collapse-toggle {{ background: #383838; color: {config.SECONDARY};
+                border: none; box-shadow: none; border-radius: 8px; padding: 6px 10px; }}
+            .island button.compact-toggle:hover, .island button.collapse-toggle:hover {{ background: #484848; }}
+            .island button.compact-toggle:active, .island button.collapse-toggle:active {{ background: #555555; }}
+            .island button.compact-toggle:focus-visible, .island button.collapse-toggle:focus-visible {{
+                outline: 2px solid {config.ACCENT}; outline-offset: -3px; }}
         """.encode())
         Gtk.StyleContext.add_provider_for_display(self.get_display(), css, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         keys = Gtk.EventControllerKey()
@@ -74,9 +116,20 @@ class PillWindow(Gtk.ApplicationWindow):
 
     def _key_pressed(self, controller, keyval, keycode, state):
         if keyval == Gdk.KEY_Escape:
-            self.close()
+            if self.expanded:
+                self.set_expanded(False)
+            else:
+                self.close()
             return True
         return False
+
+    def set_expanded(self, expanded):
+        self.expanded = expanded
+        self.stack.set_visible_child_name("expanded" if expanded else "compact")
+        self.set_default_size(config.WIDTH if expanded else config.COMPACT_WIDTH, -1)
+        (self.collapse_button if expanded else self.compact_button).grab_focus()
+        if self.get_mapped():
+            GLib.timeout_add(100, self._place)
 
     def _mapped(self, widget):
         # Saat map pertama, ukuran widget belum selalu selesai dialokasikan.
@@ -100,9 +153,10 @@ class PillWindow(Gtk.ApplicationWindow):
             scale = monitor.get_scale_factor()
             left = geometry.x + config.OFFSET_X
             right = geometry.x + geometry.width - self.get_width() - config.OFFSET_X
+            center = geometry.x + (geometry.width - self.get_width()) // 2
             top = geometry.y + config.OFFSET_Y
             bottom = geometry.y + geometry.height - self.get_height() - config.OFFSET_Y
-            x = (left if config.POSITION.endswith("left") else right) * scale
+            x = (center if config.POSITION.endswith("center") else left if config.POSITION.endswith("left") else right) * scale
             y = (bottom if config.POSITION.startswith("bottom") else top) * scale
             place_above(surface.get_xid(), max(0, x), max(0, y))
         except Exception as exc:
@@ -137,6 +191,8 @@ class PillWindow(Gtk.ApplicationWindow):
             LOG.warning("Pembacaan media gagal: %s", exc)
             self._state = None
             self.card.show_error()
+            self.compact_label.set_text("Media terputus")
+            self.compact_button.set_tooltip_text("Koneksi media terputus · Klik untuk detail")
             GLib.timeout_add(100, self._place)
         if self._pending_command is not None:
             command, expected_player = self._pending_command
@@ -150,6 +206,9 @@ class PillWindow(Gtk.ApplicationWindow):
         visibility_changed = (self._state is None) != (state is None)
         self._state = state
         self.card.show_state(state, demo=self.demo)
+        self.compact_label.set_text(state.title if state else "Tidak ada media")
+        self.compact_icon.set_from_icon_name("media-playback-start-symbolic" if state and state.playback_status == "Playing" else "media-playback-pause-symbolic" if state else "audio-x-generic-symbolic")
+        self.compact_button.set_tooltip_text(f"{state.title} · {state.artist}\nKlik untuk membuka kartu media" if state else "Putar musik, lalu klik untuk membuka kartu media")
         if visibility_changed and self.get_mapped():
             GLib.timeout_add(100, self._place)
 

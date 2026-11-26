@@ -1,11 +1,12 @@
-"""Pengaturan pill. Offset dihitung dari sudut monitor utama X11."""
+"""Pengaturan pill. Posisi awal mengacu ke monitor utama X11."""
 
 POLL_INTERVAL_SECONDS = 1
-POSITION = "top-right"
+POSITION = "top-center"
 OFFSET_X = 24
 OFFSET_Y = 40
 FONT = "Sans 11"
 WIDTH = 380
+COMPACT_WIDTH = 200
 PADDING = 20
 RADIUS = 32
 BACKGROUND = "#202020"

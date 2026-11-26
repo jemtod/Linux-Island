@@ -4,6 +4,8 @@ Widget floating kecil untuk GNOME/Ubuntu, terinspirasi dari [taskbar-island](htt
 
 Versi lite menyediakan cover, metadata, progress, kontrol media, serta lirik sinkron LRCLIB dan romanisasi Jepang. Logic MPRIS dan lirik terpisah dari GTK agar bisa diuji headless. Kartu Claude usage dan launcher belum termasuk versi ini.
 
+Pill mulai kecil (200×40) di tengah atas, tepat di bawah panel jam GNOME. Klik/sentuh pill untuk membuka kartu lengkap. Tombol `Kecilkan` atau Esc mengembalikannya ke bentuk kecil; Esc saat sudah kecil menutup aplikasi. Ctrl+Q selalu menutup saat window fokus. Aktivasi melalui Enter/Space juga didukung. Bentuk membesar langsung tanpa animasi; tidak membuka otomatis saat hover.
+
 ## Instalasi
 
 Target proyek: Ubuntu 24.04 LTS dengan GNOME, Python 3.11+ (Python bawaan Ubuntu 24.04 adalah 3.12), GTK4 dan libadwaita. Gunakan Python sistem Ubuntu untuk GUI agar binding `python3-gi` cocok dengan interpreter. Virtualenv menggunakan `--system-site-packages` untuk mengakses binding tersebut. Jalankan aplikasi dari sesi desktop pengguna, bukan lewat sudo, agar memakai session D-Bus yang sama dengan player.
@@ -75,7 +77,7 @@ Untuk memeriksa UI tanpa player atau D-Bus:
 python island.py --demo
 ```
 
-Pill berlabel `Demo` menampilkan lagu contoh, progress yang berjalan, dan tiga kontrol yang berfungsi pada data simulasi. Play/pause menghentikan/melanjutkan waktu demo; next/previous berpindah di antara tiga judul contoh. Tidak ada cover contoh; ikon audio GNOME menjadi fallback. Tutup dengan Esc atau Ctrl+Q saat pill memiliki fokus, lalu jalankan `python island.py` untuk metadata nyata. Pill memindai setiap satu detik di worker agar akses D-Bus tidak memblokir UI. Saat semua player ditutup, pill mengecil dengan ajakan memutar musik. Gangguan bus ditampilkan sebagai pesan dan dicoba lagi otomatis.
+Klik pill kecil untuk melihat kartu berlabel `Demo` dengan lagu contoh, progress yang berjalan, dan tiga kontrol yang berfungsi pada data simulasi. Play/pause menghentikan/melanjutkan waktu demo; next/previous berpindah di antara tiga judul contoh. Tidak ada cover contoh; ikon audio GNOME menjadi fallback. Tutup dengan Ctrl+Q saat pill memiliki fokus, lalu jalankan `python island.py` untuk metadata nyata. Pill memindai setiap satu detik di worker agar akses D-Bus tidak memblokir UI. Saat semua player ditutup, pill kecil menampilkan `Tidak ada media`; kartu yang sedang terbuka menampilkan ajakan memutar musik. Gangguan bus ditampilkan sebagai pesan dan dicoba lagi otomatis.
 
 Saat lagu diputar, periksa cover, judul/artis, dan posisi terhadap player asli. Klik play/pause: status dan posisi mengikuti. Klik next/previous: player asli harus menerima perintah. Tombol yang tidak didukung capability player dinonaktifkan. Tab memindahkan fokus antar tombol; Enter/Space mengaktifkannya. Coba judul panjang: teks dipotong dengan elipsis dan teks lengkap tersedia saat di-hover. Buka window lain: pill seharusnya tetap di atas.
 
@@ -126,7 +128,7 @@ GDK_BACKEND=wayland python island.py
 
 Pada Wayland native, GTK4 tidak menyediakan posisi absolut/always-on-top: window biasa tetap muncul dan terminal memberi peringatan. Jangan gunakan backend native jika membutuhkan kedua fitur itu sekarang. Pada mesin tanpa XWayland, gunakan fallback native atau aktifkan XWayland pada sistem.
 
-Ubah `POSITION` (`top-right`, `top-left`, `bottom-right`, `bottom-left`), `OFFSET_X`, `OFFSET_Y`, ukuran, font, dan warna di `island_linux/config.py`, lalu jalankan ulang. Posisi awal mengacu ke monitor utama X11. Offset belum memperhitungkan panel/dock; naikkan offset bila bertumpuk. Mixed-DPI/multi-monitor dan fullscreen perlu diuji lagi; always-on-top tidak berarti overlay di atas fullscreen, layar kunci, atau GNOME Overview.
+Ubah `POSITION` (`top-center` sebagai default, `top-right`, `top-left`, `bottom-center`, `bottom-right`, `bottom-left`), `OFFSET_X`, `OFFSET_Y`, `COMPACT_WIDTH`, `WIDTH`, font, dan warna di `island_linux/config.py`, lalu jalankan ulang. Posisi awal mengacu ke monitor utama X11. Pada posisi center, `OFFSET_X` diabaikan agar pill tetap tepat di tengah meskipun ukurannya berubah. `OFFSET_Y=40` memberi jarak dari tepi atas untuk panel GNOME standar; sesuaikan jika tinggi panel berbeda. Widget ini tidak menggantikan atau menempel di dalam panel jam GNOME; integrasi panel membutuhkan extension GNOME tersendiri. Mixed-DPI/multi-monitor dan fullscreen perlu diuji lagi; always-on-top tidak berarti overlay di atas fullscreen, layar kunci, atau GNOME Overview.
 
 Layout dan alasan warna dicatat di [DESIGN.md](DESIGN.md). Pengujian GTK memerlukan display; unit test tetap dapat dijalankan headless.
 
@@ -145,7 +147,7 @@ Metadata tidak selalu lengkap. Durasi/posisi tidak valid dianggap nol, progres d
 - Durasi, posisi, cover, dan capability mengikuti data player. Metadata yang kurang atau posisi yang jarang diperbarui bisa membuat tampilan tidak lengkap/terlambat.
 - LRCLIB tidak selalu memiliki lagu atau versi rekaman yang cocok. Romanisasi otomatis memiliki batas bacaan kanji; deteksi karakter Han juga dapat menangkap bahasa selain Jepang.
 - Wayland native belum mendukung posisi sudut/above. Backend XWayland memakai hint compositor; fullscreen, GNOME Overview, mixed-DPI, dan multi-monitor belum dijamin.
-- Progress belum dapat dipakai seek. Belum ada hover-expand, autostart, atau installer desktop; tampilan aktif selalu penuh. Esc/Ctrl+Q saat window fokus menutup aplikasi.
+- Progress belum dapat dipakai seek. Belum ada hover-expand, autostart, atau installer desktop. Pill dibuka melalui klik/sentuhan atau keyboard, lalu dikecilkan melalui tombol atau Esc. Ctrl+Q saat window fokus menutup aplikasi.
 - Worker memakai timeout jaringan, tetapi penutupan proses dapat menunggu request aktif selesai. Cache lirik hanya bertahan selama proses berjalan.
 
 ## Roadmap

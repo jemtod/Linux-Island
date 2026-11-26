@@ -1,5 +1,14 @@
 # Validasi runtime
 
+## Pembaruan pill kecil dan posisi tengah atas
+
+- PASS: pill demo dijalankan pada GNOME/XWayland dan hasil render diperiksa. `xwininfo` menunjukkan ukuran 200×40 di (583,40), kartu terbuka 380×288 di (493,40), lalu kembali ke 200×40 di (583,40), pada monitor 1366×768. Pusat horizontal ketiganya tetap 683.
+- PASS: aktivasi `clicked` pada pill membuka kartu, tombol Kecilkan menutup kartu, Esc pada kartu mengembalikan pill kecil. Kontrol play/pause tetap bekerja setelah expand. Ini pemeriksaan sinyal GTK, bukan pengujian hardware layar sentuh.
+- PASS: uji integrasi `tests/manual_media_ui.py` membuka pill melalui tombol ringkas sebelum memeriksa D-Bus, cover, progress, kontrol, fokus, lirik, romaji, dan seek. Semua pemeriksaan lulus. 67 test headless tetap lulus.
+- Delivery Gate Hard PASS: tombol native memiliki label, tooltip, cursor, state hover/active dan outline fokus; tidak ada kontrol mati atau aset baru. Kontras menggunakan warna pill sebelumnya yang sudah diukur. Pilihan pengguna menjadi arahan eksplisit untuk bentuk/posisi baru.
+- Delivery Gate Purpose/Liveliness PASS: ENERGY/RHYTHM/MOTION 1/1/1 dipertahankan; widget kecil menghemat ruang, expand menampilkan fungsi sesuai kebutuhan, tanpa animasi dekoratif. Alasan tercatat di DESIGN.md.
+- Delivery Gate Craftsmanship PASS untuk skenario diuji: window benar-benar berubah ukuran dan tetap terpusat; metadata terus diperbarui saat ringkas. Posisi native Wayland tetap dibatasi seperti sebelumnya. Integrasi ke panel jam belum termasuk; window berada di bawah panel. Perangkat sentuh fisik belum diuji.
+
 ## Tahap 5: selftest, CI, dan dokumentasi
 
 - PASS: `python3 -S -O island.py --selftest` menghasilkan dua PASS dengan exit code 0. Opsi `-S` menonaktifkan site-packages; `-O` memastikan pemeriksaan tidak bergantung pada assert yang bisa dihapus interpreter.
