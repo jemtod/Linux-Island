@@ -8,3 +8,17 @@ htmlcov/
 *.egg-info/
 build/
 dist/
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+
+# Editor and desktop files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
