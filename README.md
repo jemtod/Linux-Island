@@ -1,6 +1,6 @@
 # island-linux
 
-Widget floating kecil untuk GNOME/Ubuntu. Versi lite berfokus pada media MPRIS dan lirik sinkron LRCLIB.
+A small floating media widget for GNOME/Ubuntu, with MPRIS playback controls and synced lyrics from LRCLIB.
 
 Inspired by [taskbar-island](https://github.com/xfwil/taskbar-island).
 
@@ -20,19 +20,19 @@ Compact media indicator in the GNOME panel:
 
 ## Overview
 
-Versi lite menyediakan cover, metadata, progress, kontrol media, serta lirik sinkron LRCLIB dan romanisasi Jepang. Logic MPRIS dan lirik terpisah dari GTK agar bisa diuji headless. Kartu Claude usage dan launcher belum termasuk versi ini.
+The lite version includes album artwork, track metadata, playback progress, media controls, synced LRCLIB lyrics, and Japanese romanization. MPRIS and lyrics logic are separate from GTK so they can be tested headlessly. Claude usage cards and launcher features are not included in this version.
 
-Pill mulai kecil (200×40) di tengah atas, tepat di bawah panel jam GNOME. Klik/sentuh pill untuk membuka kartu lengkap. Tombol `Kecilkan` atau Esc mengembalikannya ke bentuk kecil; Esc saat sudah kecil menutup aplikasi. Ctrl+Q selalu menutup saat window fokus. Aktivasi melalui Enter/Space juga didukung. Bentuk membesar langsung tanpa animasi; tidak membuka otomatis saat hover.
+The standalone pill starts at 200×40 pixels at the top center, just below the GNOME clock panel. Click or tap it to open the full card. The `Kecilkan` (Minimize) button or Esc returns it to its compact form; pressing Esc while compact closes the application. Ctrl+Q closes the application whenever its window has focus. Enter and Space also activate the pill. Expansion is immediate, without animation or automatic expansion on hover.
 
-Alternatif **menyatu dengan jam panel** tersedia melalui extension lokal, lihat bagian berikut. Dalam mode itu, jam dan judul lagu berada di dalam satu latar pill pada panel GNOME; tidak ada window kecil terpisah.
+You can also integrate the widget with the panel clock using the local extension described below. In that mode, the clock and track title share a pill background in the GNOME panel, without a separate compact window.
 
-## Menyatu dengan jam GNOME
+## GNOME clock integration
 
-Extension `Island Linux · Jam dan Media` mengelompokkan jam asli GNOME dengan tombol judul media pada panel atas. Klik jam tetap membuka kalender asli; klik judul lagu membuka kartu lengkap. Tombol Kecilkan atau Esc pada kartu menutup window, sehingga indikator ringkas hanya berada di panel. Tidak perlu menjalankan `python island.py` terus-menerus; tutup window standalone yang sudah terbuka agar tidak ada pill kedua.
+The `Island Linux · Jam dan Media` extension groups the original GNOME clock and a media title button in the top panel. Clicking the clock opens the native calendar; clicking the track title opens the full card. The Minimize button or Esc closes the card window, leaving the compact indicator in the panel. You do not need to keep `python island.py` running separately. Close any existing standalone window to avoid a second pill.
 
-Extension ditujukan ke GNOME Shell 46–50, dengan runtime diuji pada GNOME 50.1. Versi lain dalam rentang tersebut masih memerlukan uji pengguna, terutama jika memakai extension pengubah panel/jam. Indikator menyatu memakai widget native Shell pada Wayland maupun X11; kartu lengkap tetap GTK dengan batas backend yang dijelaskan di bawah.
+The extension targets GNOME Shell 46–50 and has been tested at runtime on GNOME 50.1. Other versions in that range still need user testing, especially with extensions that modify the panel or clock. The integrated indicator uses native Shell widgets on both Wayland and X11. The full card remains a GTK window, subject to the backend limitations below.
 
-Setelah dependensi aplikasi terpasang, buat paket dari folder proyek menggunakan Python virtualenv GUI:
+After installing the application dependencies, build the package from the project directory using the GUI virtual environment:
 
 ```bash
 source .venv/bin/activate
@@ -40,31 +40,32 @@ python tools/package_extension.py
 gnome-extensions install --force dist/island-linux@local.shell-extension.zip
 ```
 
-Untuk instalasi baru pada Wayland, logout lalu login kembali agar GNOME mengenali extension lokal. Setelah login, aktifkan:
+For a new installation on Wayland, log out and back in so GNOME can recognize the local extension. Then enable it:
 
 ```bash
 gnome-extensions enable island-linux@local
 gnome-extensions info island-linux@local
 ```
 
-Jika extension pengguna sedang dinonaktifkan secara global, buka aplikasi **Extensions**, aktifkan sakelar extension pengguna, lalu aktifkan **Island Linux · Jam dan Media**. Status yang diharapkan adalah `ACTIVE`. Pada workspace pengembangan ini paket sudah dipasang; sesi saat pemasangan belum mengenali UUID baru sehingga tetap memerlukan logout/login.
+If user extensions are disabled globally, open the **Extensions** application, enable user extensions, then enable **Island Linux · Jam dan Media**. The expected status is `ACTIVE`.
 
-Putar lagu: judul pada panel diperbarui setiap dua detik melalui MPRIS. Klik judul untuk melihat cover/kontrol/lirik, lalu klik Kecilkan. Klik jam untuk memastikan kalender tetap terbuka. Menonaktifkan extension mengembalikan jam ke parent panel semula:
+Play a track: the panel title updates through MPRIS every two seconds. Click the title to see artwork, controls, and lyrics, then click Minimize. Click the clock to check that the calendar still opens. Disabling the extension restores the clock to its original panel parent:
 
 ```bash
 gnome-extensions disable island-linux@local
 ```
 
-Paket menyimpan path absolut interpreter virtualenv dan proyek di `launcher.json`. Jika folder proyek atau virtualenv dipindahkan, buat/pasang paket ulang. Extension menjalankan `--inspect` secara asinkron setiap dua detik dan hanya mengizinkan satu kartu terbuka per instance extension. Ia tidak menambah konfigurasi autostart aplikasi standalone. Mode CLI `--panel-card` bisa diuji sendiri dengan `python island.py --panel-card`.
+The package stores absolute paths to the virtual environment interpreter and project in `launcher.json`. Rebuild and reinstall it if you move either directory. The extension runs `--inspect` asynchronously every two seconds and allows only one open card per extension instance. It does not configure autostart for the standalone application. You can test the card mode separately with `python island.py --panel-card`.
 
-## Instalasi
+## Installation
 
-Target proyek: Ubuntu 24.04 LTS dengan GNOME, Python 3.11+ (Python bawaan Ubuntu 24.04 adalah 3.12), GTK4 dan libadwaita. Gunakan Python sistem Ubuntu untuk GUI agar binding `python3-gi` cocok dengan interpreter. Virtualenv menggunakan `--system-site-packages` untuk mengakses binding tersebut. Jalankan aplikasi dari sesi desktop pengguna, bukan lewat sudo, agar memakai session D-Bus yang sama dengan player.
+The project targets Ubuntu 24.04 LTS with GNOME, Python 3.11+, GTK4, and libadwaita. Ubuntu 24.04 ships with Python 3.12. Use Ubuntu's system Python for the GUI so the `python3-gi` bindings match the interpreter. Create the virtual environment with `--system-site-packages` to access those bindings. Run the application from your desktop session without sudo so it shares the player's session D-Bus.
+
+From the cloned project directory, run:
 
 ```bash
 sudo apt update
 sudo apt install python3-venv python3-gi python3-gi-cairo gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-gdkpixbuf-2.0 libx11-6 xwayland dbus
-cd island-linux
 python3 -m venv --system-site-packages .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt -r requirements-dev.txt
@@ -74,9 +75,9 @@ python island.py --inspect
 python island.py
 ```
 
-Putar lagu di Spotify, browser yang mengaktifkan MPRIS, atau VLC. `--inspect` mencetak JSON berisi judul, daftar artis, URL cover, durasi dan posisi dalam detik. Jeda player lalu ulangi: status menjadi `Paused`. Tutup semua player: muncul status kosong. Perintah ini mengambil satu snapshot; jalankan ulang untuk melihat perubahan.
+Play music in Spotify, an MPRIS-enabled browser, or VLC. `--inspect` prints JSON containing the title, artist list, artwork URL, duration, and position in seconds. Pause the player and run it again: the status should become `Paused`. Close all players to see the empty state. This command takes a single snapshot; run it again to see changes.
 
-Instalasi membutuhkan internet; pengujian logic berikut berjalan tanpa GTK, pydbus, koneksi jaringan, atau display. Gunakan virtualenv terpisah jika ingin menguji lingkungan minimal:
+Installation requires internet access. The following logic tests run without GTK, pydbus, network access, or a display. Use a separate virtual environment to test a minimal setup:
 
 ```bash
 python3 -m venv .venv-headless
@@ -86,69 +87,69 @@ python -m pytest -q
 deactivate
 ```
 
-Folder `.venv-headless` tidak diperlukan untuk menjalankan GUI. Aktifkan kembali `.venv` sebelum menjalankan pill.
+The `.venv-headless` directory is not needed to run the GUI. Reactivate `.venv` before launching the pill.
 
-## Selftest dan CI
+## Selftest and CI
 
-Selftest hanya memerlukan Python standar, bahkan tanpa dependensi pip:
+The selftest requires only the Python standard library, without pip dependencies:
 
 ```bash
 python3 island.py --selftest
 ```
 
-Hasil yang diharapkan: dua baris `PASS`, satu untuk MPRIS dan satu untuk lirik, dengan exit code 0. Bila pemeriksaan gagal, muncul `FAIL` dan exit code 1. Pemeriksaan meliputi metadata dan satuan waktu, prioritas player, tiga kontrol mock, fallback LRCLIB, cache, pemilihan baris, dan alur romanisasi mock. Selftest tidak menguji koneksi bus nyata, layanan LRCLIB, GTK, atau kamus pykakasi; gunakan pytest dan uji integrasi desktop untuk cakupan itu.
+Expect two `PASS` lines, one for MPRIS and one for lyrics, with exit code 0. A failed check produces `FAIL` and exit code 1. Checks cover metadata and time units, player priority, three mocked controls, LRCLIB fallback, caching, lyric line selection, and mocked romanization. The selftest does not exercise a real bus connection, the LRCLIB service, GTK, or the pykakasi dictionary. Use pytest and desktop integration tests for that coverage.
 
-Mode `--selftest`, `--inspect`, `--demo`, dan `--panel-card` saling eksklusif. Tanpa opsi, aplikasi membuka GUI. `--inspect` membutuhkan pydbus dan session bus nyata, tetapi tidak membuka window.
+The `--selftest`, `--inspect`, `--demo`, and `--panel-card` modes are mutually exclusive. With no options, the application opens the GUI. `--inspect` requires pydbus and a real session bus but does not open a window.
 
-[Workflow CI](.github/workflows/ci.yml) menjalankan pytest dan selftest pada Python 3.11 serta 3.12 di runner Ubuntu 24.04. Runner hanya memasang dependensi logic/test. Pengujian yang memerlukan GTK/display berada di `tests/manual_media_ui.py`, di luar pola koleksi `test_*.py`, sehingga tidak dijalankan pada CI headless. Workflow baru berjalan setelah repository di-push ke GitHub; hasil lokal bukan bukti bahwa GitHub Actions sudah berjalan.
+The [CI workflow](.github/workflows/ci.yml) runs pytest and the selftest on Python 3.11 and 3.12 using Ubuntu 24.04 runners. Runners install only logic and test dependencies. Tests requiring GTK or a display live in `tests/manual_media_ui.py`, outside the `test_*.py` collection pattern, and do not run in headless CI. Local test results do not establish whether a GitHub Actions run has passed; check the repository's Actions tab.
 
-## Struktur proyek
+## Project structure
 
 ```text
-island.py                  # CLI, inspeksi, selftest, atau GUI
+island.py                  # CLI, inspection, selftest, or GUI
 island_linux/
-  config.py                # Posisi, tema, font, identitas LRCLIB
-  mpris_client.py          # Seleksi player, metadata, kontrol
-  lyrics.py                # LRCLIB, parser LRC, romanisasi, cache
-  selftest.py              # Pemeriksaan logic offline
+  config.py                # Position, theme, fonts, LRCLIB identity
+  mpris_client.py          # Player selection, metadata, controls
+  lyrics.py                # LRCLIB, LRC parsing, romanization, cache
+  selftest.py              # Offline logic checks
   ui/
-    pill.py                # Window dan worker D-Bus
-    card_media.py          # Kartu media dan worker lirik/cover
-    artwork.py             # Pembacaan cover lokal/HTTP
-    x11.py                 # Hint posisi dan above pada X11
-tests/                     # Unit test headless dan uji desktop opsional
-gnome-extension/            # Extension lokal jam + media pada panel
-tools/package_extension.py # Paket ZIP dengan path launcher lokal
-.github/workflows/ci.yml    # Matrix Python 3.11/3.12
+    pill.py                # Window and D-Bus worker
+    card_media.py          # Media card and lyrics/artwork workers
+    artwork.py             # Local/HTTP artwork loading
+    x11.py                 # X11 position and above hints
+tests/                     # Headless unit tests and optional desktop tests
+gnome-extension/           # Local clock and media panel extension
+tools/package_extension.py # ZIP packaging with local launcher paths
+.github/workflows/ci.yml   # Python 3.11/3.12 test matrix
 ```
 
-## Menguji kartu media
+## Testing the media card
 
-Untuk memeriksa UI tanpa player atau D-Bus:
+To inspect the UI without a player or D-Bus:
 
 ```bash
 python island.py --demo
 ```
 
-Klik pill kecil untuk melihat kartu berlabel `Demo` dengan lagu contoh, progress yang berjalan, dan tiga kontrol yang berfungsi pada data simulasi. Play/pause menghentikan/melanjutkan waktu demo; next/previous berpindah di antara tiga judul contoh. Tidak ada cover contoh; ikon audio GNOME menjadi fallback. Tutup dengan Ctrl+Q saat pill memiliki fokus, lalu jalankan `python island.py` untuk metadata nyata. Pill memindai setiap satu detik di worker agar akses D-Bus tidak memblokir UI. Saat semua player ditutup, pill kecil menampilkan `Tidak ada media`; kartu yang sedang terbuka menampilkan ajakan memutar musik. Gangguan bus ditampilkan sebagai pesan dan dicoba lagi otomatis.
+Click the compact pill to open a card labeled `Demo`, with sample tracks, advancing progress, and three controls operating on simulated data. Play/pause stops and resumes demo time; next/previous switches between three sample titles. There is no sample artwork, so the GNOME audio icon serves as a fallback. Close the demo with Ctrl+Q while its window has focus, then run `python island.py` for real metadata. The pill polls once per second in a worker so D-Bus access does not block the UI. When all players close, the compact pill displays `Tidak ada media` (No media), while an open card prompts you to play music. Bus errors appear as messages and trigger automatic retries.
 
-Saat lagu diputar, periksa cover, judul/artis, dan posisi terhadap player asli. Klik play/pause: status dan posisi mengikuti. Klik next/previous: player asli harus menerima perintah. Tombol yang tidak didukung capability player dinonaktifkan. Tab memindahkan fokus antar tombol; Enter/Space mengaktifkannya. Coba judul panjang: teks dipotong dengan elipsis dan teks lengkap tersedia saat di-hover. Buka window lain: pill seharusnya tetap di atas.
+During playback, compare artwork, title, artist, and position with the actual player. Click play/pause and check that status and position follow. Click next/previous and check that the player receives the commands. Buttons are disabled when the player does not support their capabilities. Tab moves focus between buttons; Enter and Space activate them. Try a long title: it should be truncated with an ellipsis, with the full text available in a tooltip. Open another window and check that the pill stays above it.
 
-Cover mendukung HTTP/HTTPS, URI `file://`, dan path absolut. Pemuatan/decode dilakukan di worker terpisah, dengan batas 5 MiB dan timeout jaringan. Cover kosong, rusak, atau gagal diunduh memakai ikon audio; kontrol tetap berjalan. Respons cover lagu lama diabaikan bila lagu sudah berganti. URL gagal dicoba lagi setelah URL berubah atau aplikasi dijalankan ulang. Cover tidak disimpan ke disk.
+Artwork supports HTTP/HTTPS, `file://` URIs, and absolute paths. Loading and decoding happen in a separate worker, with a 5 MiB limit and a network timeout. Missing, corrupt, or failed artwork falls back to the audio icon while controls remain available. Artwork responses for a previous track are ignored after a track change. Failed URLs are retried after the URL changes or the application restarts. Artwork is not saved to disk.
 
-Progress bar bersifat informatif, belum mendukung seek. Bila durasi tidak tersedia, waktu total ditampilkan `?:??` dan progress tetap nol. Posisi mengikuti snapshot MPRIS tiap detik, bukan perkiraan waktu lokal. Player kadang membatasi next/previous atau memperbarui status setelah jeda singkat.
+The progress bar is informational and does not support seeking. When duration is unavailable, the total time shows `?:??` and progress stays at zero. Position follows MPRIS snapshots every second, rather than a local time estimate. Players may restrict next/previous or update their status after a short delay.
 
-Uji integrasi opsional memakai player tiruan di session D-Bus terisolasi. Jalankan dari terminal desktop dengan virtualenv aktif:
+The optional integration test uses a mock player in an isolated D-Bus session. Run it from a desktop terminal with the virtual environment active:
 
 ```bash
 dbus-run-session -- env ISLAND_TEST_BUS=1 python tests/manual_media_ui.py
 ```
 
-Window uji muncul sebentar, memuat cover fixture lokal, menjalankan ketiga kontrol, memeriksa antrean klik saat polling, urutan fokus keyboard, sinkronisasi lirik, dan romaji, lalu menutup. Hasil yang diharapkan: baris `PASS: D-Bus, cover, progress, kontrol, fokus, lirik, romaji, seek maju/mundur, respons lagu lama`. HTTP LRCLIB dimock memakai `responses`; tidak ada akses internet dari skrip uji ini. Skrip tidak termasuk koleksi pytest headless dan tidak mengontrol player di session desktop utama. Beberapa sistem menampilkan log portal GNOME selama session uji dibuat/dihentikan.
+The test briefly opens a window, loads local fixture artwork, exercises all three controls, checks queued clicks during polling, keyboard focus order, synced lyrics, and romaji, then closes. Expect a `PASS:` line covering D-Bus, artwork, progress, controls, focus, lyrics, romaji, forward/backward seeking, and stale track responses. LRCLIB HTTP requests are mocked with `responses`; this script does not access the internet. It is excluded from headless pytest collection and does not control players in your main desktop session. Some systems print GNOME portal logs as the test session starts or stops.
 
-## Menguji lirik
+## Testing lyrics
 
-Perbarui dependensi pada virtualenv aktif, lalu jalankan demo tanpa internet:
+Update dependencies in the active virtual environment, then launch the offline demo:
 
 ```bash
 python -m pip install -r requirements.txt -r requirements-dev.txt
@@ -156,59 +157,59 @@ python -m pytest -q
 python island.py --demo
 ```
 
-Bagian bawah kartu menampilkan baris aktif, romaji bila ada teks Jepang, serta pratinjau baris berikutnya. Demo memakai teks contoh buatan proyek. Setelah beberapa detik, teks Jepang dan romaji muncul. Tombol jeda menghentikan posisi lirik; next/previous memulai waktu contoh dari nol. Baris berganti langsung tanpa animasi agar mudah dibaca. Teks panjang dipotong dengan elipsis; arahkan pointer untuk membaca tooltip lengkap.
+The bottom of the card shows the active lyric line, romaji for Japanese text when available, and a preview of the next line. The demo uses sample text written for this project. Japanese text and romaji appear after a few seconds. Pausing freezes the lyric position; next/previous resets sample time to zero. Lines switch immediately without animation for readability. Long text is truncated with an ellipsis; hover to read the full tooltip.
 
-Untuk lagu nyata, jalankan `python island.py`, lalu putar lagu di player MPRIS. Saat terhubung internet dan LRCLIB memiliki lirik sinkron yang cocok, baris mengikuti posisi player setiap satu detik. Seek di aplikasi player asli untuk memeriksa lompatan maju/mundur. Jeda tidak menggeser lirik bila posisi MPRIS tetap. Pindah lagu saat lirik masih dimuat: respons lagu sebelumnya harus diabaikan.
+For real tracks, run `python island.py` and play music in an MPRIS player. With internet access and matching synced lyrics on LRCLIB, lines follow the player position every second. Seek in the actual player to check forward and backward jumps. Pausing should not advance lyrics if the MPRIS position stays fixed. Switch tracks while lyrics are loading to verify that responses for the previous track are ignored.
 
-Client mencoba `/api/get` dengan artis pertama, judul, dan durasi jika valid, lalu `/api/search` bila lirik sinkron belum ditemukan. Kandidat pencarian harus cocok pada judul/artis yang dinormalisasi, dengan selisih durasi paling besar tiga detik jika durasi diketahui. Pencocokan ini bisa melewatkan metadata dengan tambahan judul live/remix atau nama artis yang berbeda. Tanpa durasi, versi rekaman lebih sulit dibedakan.
+The client first tries `/api/get` with the first artist, title, and duration when valid, then `/api/search` if synced lyrics are not found. Search candidates must match the normalized title and artist, with a duration difference of at most three seconds when duration is known. This matching may miss metadata with added live/remix labels or different artist names. Without duration, recording versions are harder to distinguish.
 
-Cache hanya di memori, maksimal 64 lagu: hasil tersedia disimpan 30 menit, hasil tidak ditemukan 5 menit. Polling playback tidak mengulang permintaan lirik setiap detik. Kegagalan jaringan dicoba lagi setelah sekitar satu menit selama lagu tetap aktif; respons pembatasan layanan mengikuti `Retry-After` dengan tambahan jeda kecil. Lirik yang tidak ditemukan dicari kembali saat lagu berganti kembali, sesuai umur cache, atau setelah aplikasi dijalankan ulang.
+The in-memory cache holds up to 64 tracks. Available results are cached for 30 minutes and missing results for 5 minutes. Playback polling does not repeat lyric requests every second. Network failures are retried after about a minute while the same track remains active; rate-limit responses follow `Retry-After` with a small additional delay. Missing lyrics are searched again when returning to a track after cache expiry, or after restarting the application.
 
-Status `Lirik tersedia tanpa timestamp` berarti LRCLIB punya teks tanpa waktu; teks tersebut tidak dipaksakan menjadi lirik sinkron. Lagu instrumental dan metadata yang kurang juga diberi pesan tersendiri. Timestamp kosong pada LRC ditampilkan sebagai `Jeda lirik`, bukan mempertahankan baris sebelumnya. Parser mendukung timestamp berulang dan offset LRC; offset positif memajukan waktu tampil.
+The status `Lirik tersedia tanpa timestamp` (Lyrics available without timestamps) means LRCLIB has untimed text, which is not treated as synced lyrics. Instrumental tracks and missing metadata have separate messages. Empty LRC timestamps display `Jeda lirik` (Lyric break) instead of retaining the previous line. The parser supports repeated timestamps and LRC offsets; positive offsets advance the displayed lyrics.
 
-Romanisasi memakai pykakasi dalam worker dan mempertahankan teks asli. Deteksi didasarkan pada kana/kanji, sehingga teks Han non-Jepang juga bisa dianggap Jepang. Bacaan kanji dan pemisahan kata tidak selalu sesuai konteks atau pengucapan penyanyi.
+Romanization uses pykakasi in a worker and preserves the original text. Detection uses kana/kanji, so non-Japanese Han text may also be classified as Japanese. Kanji readings and word segmentation may not match the context or the singer's pronunciation.
 
-Header identitas client dapat diubah melalui `LRCLIB_USER_AGENT` di config.py. Nilai bawaan menandai build lokal; tambahkan URL proyek publik atau kontak yang benar bila mendistribusikannya. Referensi implementasi: [API LRCLIB](https://lrclib.net/docs.md) dan [API pykakasi](https://pykakasi.readthedocs.io/en/latest/api.html).
+Change the client identity header through `LRCLIB_USER_AGENT` in `island_linux/config.py`. The default identifies a local build; include a public project URL or valid contact when distributing it. Implementation references: [LRCLIB API](https://lrclib.net/docs.md) and [pykakasi API](https://pykakasi.readthedocs.io/en/latest/api.html).
 
-## Posisi dan backend desktop
+## Positioning and desktop backends
 
-Secara default entry point mencoba backend X11, termasuk XWayland di GNOME Wayland, lalu fallback Wayland. Hint EWMH `ABOVE` dan posisi sudut dikirim melalui libX11; tidak memerlukan wmctrl atau layer-shell. Compositor tetap menentukan hasil akhirnya. Jika ingin memilih backend secara eksplisit:
+By default, the entry point tries X11, including XWayland under GNOME Wayland, then falls back to Wayland. EWMH `ABOVE` and position hints are sent through libX11, without requiring wmctrl or layer-shell. The compositor determines the final result. To choose a backend explicitly:
 
 ```bash
 GDK_BACKEND=x11 python island.py
 GDK_BACKEND=wayland python island.py
 ```
 
-Pada Wayland native, GTK4 tidak menyediakan posisi absolut/always-on-top: window biasa tetap muncul dan terminal memberi peringatan. Jangan gunakan backend native jika membutuhkan kedua fitur itu sekarang. Pada mesin tanpa XWayland, gunakan fallback native atau aktifkan XWayland pada sistem.
+On native Wayland, GTK4 does not provide absolute positioning or always-on-top behavior. A normal window still opens and a warning appears in the terminal. Use XWayland if you need those features. On systems without XWayland, use the native fallback or enable XWayland.
 
-Ubah `POSITION` (`top-center` sebagai default, `top-right`, `top-left`, `bottom-center`, `bottom-right`, `bottom-left`), `OFFSET_X`, `OFFSET_Y`, `COMPACT_WIDTH`, `WIDTH`, font, dan warna di `island_linux/config.py`, lalu jalankan ulang. Posisi window mengacu ke monitor utama X11. Pada posisi center, `OFFSET_X` diabaikan agar pill tetap tepat di tengah meskipun ukurannya berubah. `OFFSET_Y=40` memberi jarak dari tepi atas untuk panel GNOME standar; sesuaikan jika tinggi panel berbeda. Pengaturan window ini terpisah dari indikator panel extension. Mixed-DPI/multi-monitor dan fullscreen perlu diuji lagi; always-on-top tidak berarti overlay di atas fullscreen, layar kunci, atau GNOME Overview.
+Edit `POSITION` (`top-center` by default, `top-right`, `top-left`, `bottom-center`, `bottom-right`, or `bottom-left`), `OFFSET_X`, `OFFSET_Y`, `COMPACT_WIDTH`, `WIDTH`, fonts, and colors in `island_linux/config.py`, then restart. Window positioning uses the primary X11 monitor. Centered positions ignore `OFFSET_X` so the pill stays centered as its size changes. `OFFSET_Y=40` leaves space for a standard GNOME top panel; adjust it for different panel heights. These window settings are separate from the extension's panel indicator. Mixed-DPI, multiple monitors, and fullscreen behavior need further testing. Always-on-top does not guarantee an overlay above fullscreen applications, the lock screen, or GNOME Overview.
 
-Layout dan alasan warna dicatat di [DESIGN.md](DESIGN.md). Pengujian GTK memerlukan display; unit test tetap dapat dijalankan headless.
+Layout and color decisions are documented in [DESIGN.md](DESIGN.md). GTK tests require a display; unit tests can run headlessly.
 
-## Perilaku MPRIS
+## MPRIS behavior
 
-Hanya service `org.mpris.MediaPlayer2.*` yang dipindai. Player Playing didahulukan, lalu Paused. Saat status seri, player sebelumnya dipertahankan agar kartu tidak berpindah-pindah. Saat pertama memilih, nama service diurutkan untuk hasil konsisten. Player Stopped tidak ditampilkan.
+Only `org.mpris.MediaPlayer2.*` services are scanned. Playing players take priority over Paused players. When statuses tie, the previous player is retained to prevent unnecessary switching. On initial selection, service names are sorted for consistent results. Stopped players are not displayed.
 
-`play_pause()`, `next()` dan `previous()` mengembalikan `False` bila tidak ada player atau capability tidak mendukung. Kegagalan perintah/bus menghasilkan `MprisError`. Player yang hilang saat dipindai dilewati. Import pydbus ditunda hingga koneksi nyata dibuat sehingga test mock bisa berjalan headless.
+`play_pause()`, `next()`, and `previous()` return `False` if no player is available or the capability is unsupported. Command and bus failures raise `MprisError`. Players that disappear during scanning are skipped. The pydbus import is deferred until a real connection is created so mocked tests can run headlessly.
 
-Metadata tidak selalu lengkap. Durasi/posisi tidak valid dianggap nol, progres dibatasi 0 sampai 1. URL cover diteruskan ke worker pemuatan kartu media. Dukungan browser bergantung pada integrasi MPRIS dan metadata situs.
+Metadata may be incomplete. Invalid duration and position values are treated as zero, and progress is clamped between 0 and 1. Artwork URLs are passed to the media card's loading worker. Browser support depends on MPRIS integration and the website's metadata.
 
-## Batas versi lite dan troubleshooting
+## Lite version limitations and troubleshooting
 
-- Jika `import gi` gagal, pastikan memakai Python sistem dan virtualenv dibuat dengan `--system-site-packages`. Interpreter unduhan atau versi Python lain belum tentu dapat memuat binding apt.
-- Jika player tidak terdeteksi, jalankan `python island.py --inspect` dari terminal sesi desktop yang sama. Periksa bahwa player/browser mengekspos service MPRIS; hanya status Playing/Paused yang dipilih.
-- Durasi, posisi, cover, dan capability mengikuti data player. Metadata yang kurang atau posisi yang jarang diperbarui bisa membuat tampilan tidak lengkap/terlambat.
-- LRCLIB tidak selalu memiliki lagu atau versi rekaman yang cocok. Romanisasi otomatis memiliki batas bacaan kanji; deteksi karakter Han juga dapat menangkap bahasa selain Jepang.
-- Wayland native belum mendukung posisi sudut/above. Backend XWayland memakai hint compositor; fullscreen, GNOME Overview, mixed-DPI, dan multi-monitor belum dijamin.
-- Progress belum dapat dipakai seek. Belum ada hover-expand, autostart, atau installer desktop. Pill dibuka melalui klik/sentuhan atau keyboard, lalu dikecilkan melalui tombol atau Esc. Ctrl+Q saat window fokus menutup aplikasi.
-- Worker memakai timeout jaringan, tetapi penutupan proses dapat menunggu request aktif selesai. Cache lirik hanya bertahan selama proses berjalan.
+- If `import gi` fails, use system Python and create the virtual environment with `--system-site-packages`. Downloaded interpreters or other Python versions may not load the apt-installed bindings.
+- If no player is detected, run `python island.py --inspect` from a terminal in the same desktop session. Check that the player or browser exposes an MPRIS service; only Playing and Paused players are selected.
+- Duration, position, artwork, and capabilities depend on player data. Missing metadata or infrequent position updates may produce incomplete or delayed information.
+- LRCLIB may not have matching lyrics for a track or recording. Automatic romanization has limits with kanji readings, and Han character detection may also match languages other than Japanese.
+- Native Wayland does not yet support absolute positioning or always-on-top behavior. XWayland uses compositor hints; fullscreen, GNOME Overview, mixed-DPI, and multiple monitors are not guaranteed.
+- Progress does not support seeking. Hover expansion, autostart, and a desktop installer are not included. Open the pill with a click, tap, or keyboard activation; minimize it with the button or Esc. Ctrl+Q closes the application while its window has focus.
+- Workers use network timeouts, but process shutdown may wait for an active request to finish. The lyrics cache lasts only for the lifetime of the process.
 
 ## Roadmap
 
-Kartu Claude usage, launcher tiles, auto-hide fullscreen, dan dukungan layer-shell Wayland menyusul setelah versi lite. Bukti pengujian dan batas lingkungan dicatat di [VALIDATION.md](VALIDATION.md).
+Claude usage cards, launcher tiles, automatic hiding in fullscreen, and Wayland layer-shell support are planned after the lite version. Testing evidence and environment limitations are documented in [VALIDATION.md](VALIDATION.md).
 
-## Lisensi dan kredit
+## License and credits
 
-MIT, lihat [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
 
 Inspired by [taskbar-island](https://github.com/xfwil/taskbar-island). This project is built for Linux using MPRIS.
